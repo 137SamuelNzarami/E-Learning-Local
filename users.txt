@@ -1,0 +1,20 @@
+| ID | Nom                    | Email                  | Rôle           | Mot de passe       |
+| -: | ---------------------- | ---------------------- | -------------- | ------------------ |
+|  1 | Administrateur Système | `admin@tutore.local`   | Administrateur | `Admin@EUL2026!`   |
+|  2 | Mukendi Jean           | `jean@tutore.local`    | Formateur      | `Jean@EUL2026!`    |
+|  3 | Kabongo Grace          | `grace@tutore.local`   | Formateur      | `Grace@EUL2026!`   |
+|  4 | Kabila David           | `david@tutore.local`   | Formateur      | `David@EUL2026!`   |
+|  5 | Nzara Samuel           | `samuel@tutore.local`  | Étudiant       | `Samuel@EUL2026!`  |
+|  6 | Mbuyi Patrick          | `patrick@tutore.local` | Étudiant       | `Patrick@EUL2026!` |
+|  7 | Ilunga Sarah           | `sarah@tutore.local`   | Étudiant       | `Sarah@EUL2026!`   |
+|  8 | Kasongo Rachel         | `rachel@tutore.local`  | Étudiant       | `Rachel@EUL2026!`  |
+|  9 | Mutombo Kevin          | `kevin@tutore.local`   | Étudiant       | `Kevin@EUL2026!`   |
+| 10 | Mbayo Esther           | `esther@tutore.local`  | Étudiant       | `Esther@EUL2026!`  |
+| 11 | Ngoma Fabrice          | `fabrice@tutore.local` | Étudiant       | `Fabrice@EUL2026!` |
+| 12 | Mwamba Aline           | `aline@tutore.local`   | Étudiant       | `Aline@EUL2026!`   |
+
+
+Rôle	            E-mail	                Mot de passe
+Administrateur	    admin@test.local	    Admin@123456	
+Formateur	        formateur@test.local	Formateur@123456	
+Étudiant	        etudiant@test.local	    Etudiant@123456	

@@ -1,0 +1,20 @@
+const MESSAGES = Object.freeze({
+  SERVER_ERROR: "Une erreur interne est survenue.",
+  LOGIN_SUCCESS: "Connexion réussie.",
+  LOGIN_FAILED: "Email ou mot de passe incorrect.",
+  LOGOUT_SUCCESS: "Déconnexion réussie.",
+  USER_CREATED: "Utilisateur créé avec succès.",
+  USER_UPDATED: "Utilisateur modifié avec succès.",
+  USER_DELETED: "Utilisateur supprimé avec succès.",
+  USER_NOT_FOUND: "Utilisateur introuvable.",
+  FORMATION_CREATED: "Formation créée avec succès.",
+  FORMATION_UPDATED: "Formation mise à jour.",
+  FORMATION_DELETED: "Formation supprimée.",
+  MODULE_CREATED: "Module ajouté.",
+  CHAPITRE_CREATED: "Chapitre ajouté.",
+  LECON_CREATED: "Leçon créée.",
+  QUIZ_CREATED: "Quiz créé.",
+  DEVOIR_CREATED: "Devoir créé.",
+  NOTIFICATION_SENT: "Notification envoyée.",
+});
+export default MESSAGES;
