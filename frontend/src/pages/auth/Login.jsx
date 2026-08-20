@@ -11,9 +11,9 @@ function Brand() {
       <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-400 to-brand-700 text-white shadow-lift">
         <Icons.logo className="h-8 w-8" />
       </div>
-      <h1 className="text-2xl font-bold tracking-tight text-white">E-Learning Universitaire Locale</h1>
+      <h1 className="text-2xl font-bold tracking-tight text-white">E-Learning Universitair Local</h1>
       <p className="mt-2 font-serif text-base italic text-brand-200">
-        Savoir se cultive aussi près de chez soi.
+        Savoir se cultiver aussi près de chez soi.
       </p>
     </div>
   );
@@ -104,7 +104,7 @@ export default function Login() {
         <Alert type="info" className="mt-4" title="Démonstration">
           Créez un compte étudiant depuis la page d'inscription, ou utilisez un compte
           créé par votre administrateur.
-        </Alert>
+       </Alert>
       </div>
     </div>
   );
