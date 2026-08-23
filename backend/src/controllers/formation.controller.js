@@ -3,11 +3,11 @@ import ApiResponse from "../utils/api-response.js";
 
 class FormationController {
     /**
-     * Récupérer toutes les formations
+     * Récupérer toutes les formations (catalogue filtré par rôle)
      */
     async index(req, res) {
         try {
-            const formations = await FormationService.getAllFormations();
+            const formations = await FormationService.getAllFormations(req.user);
             return ApiResponse.success(
                 res,
                 "Liste des formations récupérée avec succès.",
@@ -23,7 +23,7 @@ class FormationController {
     async show(req, res) {
         try {
             const { id } = req.params;
-            const formation = await FormationService.getFormationById(id);
+            const formation = await FormationService.getFormationById(id, req.user);
             return ApiResponse.success(
                 res,
                 "Formation récupérée avec succès.",
@@ -65,6 +65,38 @@ class FormationController {
             return ApiResponse.success(
                 res,
                 "Formation modifiée avec succès.",
+                formation
+            );
+        } catch (error) {
+            return ApiResponse.fromError(res, error);
+        }
+    }
+    /**
+     * Publier une formation
+     */
+    async publish(req, res) {
+        try {
+            const { id } = req.params;
+            const formation = await FormationService.publishFormation(id, req.user, true);
+            return ApiResponse.success(
+                res,
+                "Formation publiée avec succès.",
+                formation
+            );
+        } catch (error) {
+            return ApiResponse.fromError(res, error);
+        }
+    }
+    /**
+     * Dépublier une formation (retour en brouillon)
+     */
+    async unpublish(req, res) {
+        try {
+            const { id } = req.params;
+            const formation = await FormationService.publishFormation(id, req.user, false);
+            return ApiResponse.success(
+                res,
+                "Formation dépubliée avec succès.",
                 formation
             );
         } catch (error) {

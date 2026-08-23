@@ -20,7 +20,7 @@ class QuestionController {
     try {
       const { id } = req.params;
 
-      const question = await QuestionService.getQuestionById(id);
+      const question = await QuestionService.getQuestionById(id, req.user);
 
       return ApiResponse.success(
         res,
@@ -36,7 +36,10 @@ class QuestionController {
     try {
       const { id_quiz } = req.params;
 
-      const questions = await QuestionService.getQuestionsByQuiz(id_quiz);
+      const questions = await QuestionService.getQuestionsByQuiz(
+        id_quiz,
+        req.user,
+      );
 
       return ApiResponse.success(
         res,

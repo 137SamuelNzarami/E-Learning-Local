@@ -1,74 +1,42 @@
 import path from "node:path";
 
 import ROLES from "../constants/role.js";
-import VideoRepository from "../repositories/video.repository.js";
-import DocumentRepository from "../repositories/document.repository.js";
-import SubmissionRepository from "../repositories/submission.repository.js";
-import AssignmentRepository from "../repositories/assignment.repository.js";
+import SousSectionRepository from "../repositories/sous-section.repository.js";
 import EnrollmentRepository from "../repositories/enrollment.repository.js";
+import FormationRepository from "../repositories/formation.repository.js";
 import { canAccessFormation, isAdmin } from "../utils/ownership.js";
 import { uploadDir } from "../config/upload.js";
 
 /**
- * Contrôle d'accès aux fichiers uploadés (vidéos, documents,
- * soumissions, consignes de devoir).
+ * Contrôle d'accès aux fichiers uploadés.
  *
- * Les fichiers ne sont plus servis publiquement : le serveur les résout
- * via la base de données (chemin `/uploads/<nom>`) puis vérifie que
- * l'utilisateur a le droit d'y accéder.
+ * Dans la nouvelle architecture pédagogique, les fichiers (vidéos,
+ * documents, images...) sont insérés dans le contenu RICH TEXT des
+ * sous-sections via l'éditeur. Le HTML référence les fichiers avec
+ * une URL `/api/files/<nom>` ; le serveur retrouve la formation
+ * propriétaire puis applique les règles d'accès.
  *
  * Règles :
  *  - Administrateur : accès global.
- *  - Vidéo / Document / Consignes : formateur propriétaire de la
- *    formation, ou étudiant inscrit à la formation.
- *  - Soumission : son propriétaire, le formateur propriétaire de la
- *    formation du devoir, ou l'administrateur.
+ *  - Formateur propriétaire de la formation : accès.
+ *  - Étudiant inscrit à une formation PUBLIÉE : accès.
  */
 class FileAccessService {
   /**
-   * Résoudre le type de ressource associé à un chemin et déterminer
+   * Résoudre la formation propriétaire d'un fichier et déterminer
    * si l'utilisateur peut y accéder.
    */
   async resolveAccess(filename, user) {
-    const chemin = `/uploads/${filename}`;
+    const chemin = `/api/files/${filename}`;
 
-    const video = await VideoRepository.findByChemin(chemin);
-    if (video) {
-      return {
-        allowed: await this._canAccessPedagogic(video, user),
-        type: "video",
-      };
+    const row = await SousSectionRepository.findFormationIdByFileChemin(chemin);
+
+    if (!row) {
+      return { allowed: false, type: null };
     }
 
-    const document = await DocumentRepository.findByChemin(chemin);
-    if (document) {
-      return {
-        allowed: await this._canAccessPedagogic(document, user),
-        type: "document",
-      };
-    }
-
-    const submission = await SubmissionRepository.findByChemin(chemin);
-    if (submission) {
-      const allowed =
-        isAdmin(user) ||
-        Number(submission.id_utilisateur) === Number(user.id) ||
-        canAccessFormation(
-          { id_formateur: submission.id_formateur },
-          user,
-        );
-      return { allowed, type: "soumission" };
-    }
-
-    const consignes = await AssignmentRepository.findByConsignesChemin(chemin);
-    if (consignes) {
-      return {
-        allowed: await this._canAccessPedagogic(consignes, user),
-        type: "consignes",
-      };
-    }
-
-    return { allowed: false, type: null };
+    const allowed = await this._canAccessFormation(row.id_formation, user);
+    return { allowed, type: "sous-section" };
   }
 
   /**
@@ -92,22 +60,30 @@ class FileAccessService {
     return absolute;
   }
 
-  /**
-   * Accès à une ressource pédagogique (vidéo, document, consignes).
-   */
-  async _canAccessPedagogic(row, user) {
+  async _canAccessFormation(id_formation, user) {
     if (isAdmin(user)) {
       return true;
     }
 
-    if (canAccessFormation({ id_formateur: row.id_formateur }, user)) {
+    const formation = await FormationRepository.findById(id_formation);
+
+    if (!formation) {
+      return false;
+    }
+
+    if (canAccessFormation(formation, user)) {
       return true;
     }
 
     if (user.role === ROLES.ETUDIANT) {
+      // Une formation non publiée n'accepte aucun accès étudiant.
+      if (formation.statut !== "PUBLIEE") {
+        return false;
+      }
+
       const enrollment = await EnrollmentRepository.findByUserAndFormation(
         user.id,
-        row.id_formation,
+        id_formation,
       );
 
       return Boolean(enrollment);

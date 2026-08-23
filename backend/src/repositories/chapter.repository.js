@@ -8,14 +8,15 @@ class ChapterRepository {
     const [rows] = await pool.query(`
             SELECT
                 c.id_chapitre,
+                c.id_formation,
                 c.titre,
                 c.description,
-                m.id_module,
-                m.titre AS module
+                c.ordre,
+                f.titre AS formation
             FROM chapitres c
-            INNER JOIN modules m
-                ON c.id_module = m.id_module
-            ORDER BY c.titre ASC
+            INNER JOIN formations f
+                ON c.id_formation = f.id_formation
+            ORDER BY f.id_formation ASC, c.ordre ASC, c.id_chapitre ASC
         `);
     return rows;
   }
@@ -27,13 +28,14 @@ class ChapterRepository {
       `
             SELECT
                 c.id_chapitre,
-                c.id_module,
+                c.id_formation,
                 c.titre,
                 c.description,
-                m.titre AS module
+                c.ordre,
+                f.titre AS formation
             FROM chapitres c
-            INNER JOIN modules m
-                ON c.id_module = m.id_module
+            INNER JOIN formations f
+                ON c.id_formation = f.id_formation
             WHERE c.id_chapitre = ?
             `,
       [id],
@@ -41,18 +43,44 @@ class ChapterRepository {
     return rows[0] || null;
   }
   /**
-   * Rechercher un chapitre par son titre
+   * Chapitres d'une formation (ordre pédagogique)
    */
-  async findByTitle(titre) {
+  async findByFormation(id_formation) {
     const [rows] = await pool.query(
       `
-            SELECT *
+            SELECT
+                id_chapitre,
+                id_formation,
+                titre,
+                description,
+                ordre
             FROM chapitres
-            WHERE titre = ?
+            WHERE id_formation = ?
+            ORDER BY ordre ASC, id_chapitre ASC
             `,
-      [titre],
+      [id_formation],
     );
-    return rows[0] || null;
+    return rows;
+  }
+  /**
+   * Nombre de chapitres d'une formation
+   */
+  async countByFormation(id_formation) {
+    const [rows] = await pool.query(
+      "SELECT COUNT(*) AS total FROM chapitres WHERE id_formation = ?",
+      [id_formation],
+    );
+    return rows[0].total;
+  }
+  /**
+   * Prochain ordre disponible dans une formation
+   */
+  async nextOrder(id_formation) {
+    const [rows] = await pool.query(
+      "SELECT COALESCE(MAX(ordre), 0) + 1 AS next FROM chapitres WHERE id_formation = ?",
+      [id_formation],
+    );
+    return rows[0].next;
   }
   /**
    * Ajouter un chapitre
@@ -62,13 +90,19 @@ class ChapterRepository {
       `
             INSERT INTO chapitres
             (
-                id_module,
+                id_formation,
                 titre,
-                description
+                description,
+                ordre
             )
-            VALUES (?, ?, ?)
+            VALUES (?, ?, ?, ?)
             `,
-      [data.id_module, data.titre, data.description ?? null],
+      [
+        data.id_formation,
+        data.titre,
+        data.description ?? null,
+        data.ordre ?? null,
+      ],
     );
     return result.insertId;
   }
@@ -81,10 +115,6 @@ class ChapterRepository {
     const sets = [];
     const values = [];
 
-    if (data.id_module !== undefined) {
-      sets.push("id_module = ?");
-      values.push(data.id_module);
-    }
     if (data.titre !== undefined) {
       sets.push("titre = ?");
       values.push(data.titre);
@@ -92,6 +122,10 @@ class ChapterRepository {
     if (data.description !== undefined) {
       sets.push("description = ?");
       values.push(data.description);
+    }
+    if (data.ordre !== undefined) {
+      sets.push("ordre = ?");
+      values.push(data.ordre);
     }
 
     if (sets.length === 0) {
@@ -109,6 +143,30 @@ class ChapterRepository {
       values,
     );
     return result.affectedRows;
+  }
+  /**
+   * Réordonner les chapitres d'une formation (transactionnel)
+   */
+  async reorder(id_formation, orderedIds) {
+    const conn = await pool.getConnection();
+    try {
+      await conn.beginTransaction();
+
+      for (let i = 0; i < orderedIds.length; i++) {
+        await conn.query(
+          "UPDATE chapitres SET ordre = ? WHERE id_chapitre = ? AND id_formation = ?",
+          [i + 1, orderedIds[i], id_formation],
+        );
+      }
+
+      await conn.commit();
+      return true;
+    } catch (error) {
+      await conn.rollback();
+      throw error;
+    } finally {
+      conn.release();
+    }
   }
   /**
    * Supprimer un chapitre

@@ -1,22 +1,45 @@
 import { body } from "express-validator";
 
-export const createAttemptValidator = [
-  body("id_utilisateur")
-    .notEmpty()
-    .withMessage("L'utilisateur est obligatoire.")
-    .isInt({ min: 1 })
-    .withMessage("L'identifiant de l'utilisateur est invalide."),
+/**
+ * Démarrage d'une tentative : aucun champ requis,
+ * l'utilisateur et le quiz viennent des params / du token.
+ */
+export const startAttemptValidator = [];
 
-  body("id_quiz")
-    .notEmpty()
-    .withMessage("Le quiz est obligatoire.")
-    .isInt({ min: 1 })
-    .withMessage("L'identifiant du quiz est invalide."),
+/**
+ * Soumission d'une tentative :
+ * {
+ *   reponses: [
+ *     { id_question, id_reponses: [10, 11] },   // QCM
+ *     { id_question, contenu: "Ma réponse" }    // LIBRE
+ *   ]
+ * }
+ */
+export const submitAttemptValidator = [
+  body("reponses")
+    .exists({ checkFalsy: false })
+    .withMessage("Le champ reponses est obligatoire.")
+    .isArray()
+    .withMessage("reponses doit être un tableau."),
 
-  body("note")
-    .optional({ nullable: true })
-    .isFloat({ min: 0, max: 100 })
-    .withMessage("La note doit être comprise entre 0 et 100."),
+  body("reponses.*.id_question")
+    .notEmpty()
+    .withMessage("Chaque réponse doit référencer une question.")
+    .isInt({ min: 1 })
+    .withMessage("id_question invalide."),
+
+  body("reponses.*.id_reponses")
+    .optional({ values: "null" })
+    .isArray()
+    .withMessage("id_reponses doit être un tableau d'identifiants."),
+
+  body("reponses.*.id_reponses.*")
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage("Chaque identifiant de réponse doit être un entier."),
+
+  body("reponses.*.contenu")
+    .optional({ values: "null" })
+    .isString()
+    .withMessage("contenu doit être une chaîne de caractères."),
 ];
-
-export const updateAttemptValidator = createAttemptValidator;

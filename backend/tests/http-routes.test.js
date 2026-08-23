@@ -100,13 +100,19 @@ async function main() {
   check((await call("GET", "/api/answers", F)).status === 200, "GET /answers formateur -> 200");
   check((await call("POST", "/api/answers", S)).status === 403, "POST /answers étudiant -> 403");
 
-  /* --- Inscriptions / progressions / tentatives / soumissions / réponses-étudiants --- */
+  /* --- Inscriptions / progressions / tentatives / réponses-étudiants --- */
   check((await call("GET", "/api/enrollments", S)).status === 403, "GET /enrollments étudiant -> 403");
   check((await call("GET", "/api/enrollments", F)).status === 200, "GET /enrollments formateur -> 200");
   check((await call("GET", "/api/progressions", S)).status === 403, "GET /progressions étudiant -> 403");
   check((await call("GET", "/api/attempts", S)).status === 403, "GET /attempts étudiant -> 403");
   check((await call("GET", "/api/student-answers", S)).status === 403, "GET /student-answers étudiant -> 403");
-  check((await call("GET", "/api/submissions", S)).status === 403, "GET /submissions étudiant -> 403");
+
+  /* --- Nouvelle architecture : chapitres / sections / sous-sections --- */
+  check((await call("POST", "/api/chapters", S)).status === 403, "POST /chapters étudiant -> 403");
+  check((await call("GET", "/api/sections", S)).status === 403, "GET /sections étudiant -> 403");
+  check((await call("POST", "/api/sections", S)).status === 403, "POST /sections étudiant -> 403");
+  check((await call("POST", "/api/sous-sections", S)).status === 403, "POST /sous-sections étudiant -> 403");
+  check((await call("GET", "/api/sous-sections", F)).status === 200, "GET /sous-sections formateur -> 200");
 
   /* --- Quiz / questions --- */
   check((await call("POST", "/api/quizzes", S)).status === 403, "POST /quizzes étudiant -> 403");

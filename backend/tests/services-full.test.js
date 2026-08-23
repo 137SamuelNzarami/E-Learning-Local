@@ -1,4 +1,4 @@
-/**
+ /**
  * Harnais « Services étendus » (Phase 4).
  *
  * Exécution : node tests/services-full.test.js
@@ -22,9 +22,9 @@ import AuthRepository from "../src/repositories/auth.repository.js";
 import UserRepository from "../src/repositories/user.repository.js";
 import CategoryRepository from "../src/repositories/category.repository.js";
 import FormationRepository from "../src/repositories/formation.repository.js";
-import ModuleRepository from "../src/repositories/module.repository.js";
 import ChapterRepository from "../src/repositories/chapter.repository.js";
-import LessonRepository from "../src/repositories/lesson.repository.js";
+import SectionRepository from "../src/repositories/section.repository.js";
+import SousSectionRepository from "../src/repositories/sous-section.repository.js";
 import QuizRepository from "../src/repositories/quiz.repository.js";
 import QuestionRepository from "../src/repositories/question.repository.js";
 import AnswerRepository from "../src/repositories/answer.repository.js";
@@ -45,10 +45,8 @@ import AnswerService from "../src/services/answer.service.js";
 import QuestionService from "../src/services/question.service.js";
 import QuizService from "../src/services/quiz.service.js";
 import ChapterService from "../src/services/chapter.service.js";
-import ModuleService from "../src/services/module.service.js";
-import LessonService from "../src/services/lesson.service.js";
-import VideoService from "../src/services/video.service.js";
-import DocumentService from "../src/services/document.service.js";
+import SectionService from "../src/services/section.service.js";
+import SousSectionService from "../src/services/sous-section.service.js";
 
 import {
   AccessDeniedError,
@@ -112,9 +110,9 @@ const created = {
   categories: [],
   users: [],
   formations: [],
-  modules: [],
   chapters: [],
-  lessons: [],
+  sections: [],
+  sousSections: [],
   quizzes: [],
   questions: [],
   answers: [],
@@ -160,9 +158,9 @@ async function cleanup() {
   await del(AnswerRepository, created.answers, "answer");
   await del(QuestionRepository, created.questions, "question");
   await del(QuizRepository, created.quizzes, "quiz");
-  await del(LessonRepository, created.lessons, "lesson");
+  await del(SousSectionRepository, created.sousSections, "sousSection");
+  await del(SectionRepository, created.sections, "section");
   await del(ChapterRepository, created.chapters, "chapter");
-  await del(ModuleRepository, created.modules, "module");
   await del(FormationRepository, created.formations, "formation");
   await del(UserRepository, created.users, "user");
   for (const id of created.categories) {
@@ -229,17 +227,16 @@ async function main() {
     description: "test",
   });
   created.formations.push(form1, form2);
+  await FormationRepository.updateStatut(form1, "PUBLIEE");
+  await FormationRepository.updateStatut(form2, "PUBLIEE");
 
-  const mod1 = await ModuleRepository.create({ id_formation: form1, titre: `Module S1 ${suffix}` });
-  created.modules.push(mod1);
-
-  const ch1 = await ChapterRepository.create({ id_module: mod1, titre: `Chapitre S1 ${suffix}` });
+  const ch1 = await ChapterRepository.create({ id_formation: form1, titre: `Chapitre S1 ${suffix}`, ordre: 1 });
   created.chapters.push(ch1);
 
-  const les1 = await LessonRepository.create({ id_chapitre: ch1, titre: `Leçon S1 ${suffix}`, contenu: "c" });
-  created.lessons.push(les1);
+  const sec1 = await SectionRepository.create({ id_chapitre: ch1, titre: `Section S1 ${suffix}`, ordre: 1 });
+  created.sections.push(sec1);
 
-  const quiz1 = await QuizRepository.create({ id_lecon: les1, titre: `Quiz S1 ${suffix}` });
+  const quiz1 = await QuizRepository.create({ id_chapitre: ch1, titre: `Quiz S1 ${suffix}` });
   created.quizzes.push(quiz1);
 
   const q1 = await QuestionRepository.create({ id_quiz: quiz1, enonce: `Question S1 ${suffix}` });
@@ -253,7 +250,7 @@ async function main() {
   suite = "B7.answers";
 
   const a1 = await AnswerService.createAnswer(
-    { id_question: q1, contenu: `Réponse A ${suffix}`, est_correcte: true },
+    { id_question: q1, texte: `Réponse A ${suffix}`, est_correcte: true },
     F1,
   );
   created.answers.push(a1);
@@ -291,12 +288,12 @@ async function main() {
   );
 
   await expectDenied(
-    () => AnswerService.createAnswer({ id_question: q1, contenu: "X", est_correcte: true }, F2),
+    () => AnswerService.createAnswer({ id_question: q1, texte: "X", est_correcte: true }, F2),
     "createAnswer par un formateur non propriétaire",
   );
 
   await expectDenied(
-    () => AnswerService.updateAnswer(a1, { contenu: "modifié" }, S1),
+    () => AnswerService.updateAnswer(a1, { texte: "modifié" }, S1),
     "updateAnswer par un étudiant",
   );
 
@@ -597,27 +594,23 @@ async function main() {
 
   await expectStatus(() => FormationService.getFormationById(999999999), NOT_FOUND, "formation inexistante -> 404");
   await expectStatus(() => ChapterService.getChapterById(999999999), NOT_FOUND, "chapitre inexistant -> 404");
-  await expectStatus(() => ModuleService.getModuleById(999999999), NOT_FOUND, "module inexistant -> 404");
-  await expectStatus(() => LessonService.getLessonById(999999999), NOT_FOUND, "leçon inexistante -> 404");
-  await expectStatus(() => VideoService.getVideoById(999999999), NOT_FOUND, "vidéo inexistante -> 404");
-  await expectStatus(() => DocumentService.getDocumentById(999999999), NOT_FOUND, "document inexistant -> 404");
+  await expectStatus(() => SectionService.getSectionById(999999999, admin), NOT_FOUND, "section inexistante -> 404");
+  await expectStatus(() => SousSectionService.getSousSectionById(999999999, admin), NOT_FOUND, "sous-section inexistante -> 404");
   await expectStatus(() => QuizService.getQuizById(999999999), NOT_FOUND, "quiz inexistant -> 404");
   await expectStatus(() => QuestionService.getQuestionById(999999999), NOT_FOUND, "question inexistante -> 404");
   await expectStatus(() => AnswerService.getAnswerById(999999999, admin), NOT_FOUND, "réponse inexistante -> 404");
   await expectStatus(
-    () => QuizService.createQuiz({ id_lecon: les1, titre: `Quiz S1 ${suffix}` }, F1),
+    () => QuizService.createQuiz({ id_chapitre: ch1, titre: `Quiz S1 bis ${suffix}` }, F1),
     CONFLICT,
-    "quiz en doublon -> 409",
+    "quiz en doublon (un seul par chapitre) -> 409",
   );
 
   const chDupTitle = `Chapitre doublon ${suffix}`;
-  const chDup = await ChapterService.createChapter({ id_module: mod1, titre: chDupTitle }, F1);
+  const chDup = await ChapterService.createChapter({ id_formation: form1, titre: chDupTitle }, F1);
   created.chapters.push(chDup);
-  await expectStatus(
-    () => ChapterService.createChapter({ id_module: mod1, titre: chDupTitle }, F1),
-    CONFLICT,
-    "chapitre en doublon -> 409",
-  );
+  const chDup2 = await ChapterService.createChapter({ id_formation: form1, titre: chDupTitle }, F1);
+  created.chapters.push(chDup2);
+  check(!!chDup2, "deux chapitres peuvent porter le même titre (l'ordre fait foi)");
 
   /* ================================================================ */
   console.log("--- Nettoyage ---");

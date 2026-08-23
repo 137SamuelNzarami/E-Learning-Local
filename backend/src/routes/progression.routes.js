@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { param } from "express-validator";
 
 import ProgressionController from "../controllers/progression.controller.js";
 
@@ -10,93 +11,59 @@ import roleMiddleware from "../middlewares/role.middleware.js";
 
 import validate from "../middlewares/validate.js";
 
-import {
-  createProgressionValidator,
-  updateProgressionValidator,
-} from "../validators/progression.validator.js";
-
 const router = Router();
 
 /**
- * Toutes les progressions (données personnelles : admin / formateur)
+ * Ma progression (étudiant courant)
+ */
+router.get("/me", authMiddleware, ProgressionController.mine);
+
+/**
+ * Toutes les progressions (admin)
  */
 router.get(
   "/",
   authMiddleware,
-  roleMiddleware(ROLES.ADMIN, ROLES.FORMATEUR),
+  roleMiddleware(ROLES.ADMIN),
   ProgressionController.index,
 );
 
 /**
  * Progressions d'un utilisateur
+ *
+ * - Étudiant : uniquement les siennes.
+ * - Formateur : celles de ses étudiants.
  */
 router.get(
   "/user/:id_utilisateur",
   authMiddleware,
+  [param("id_utilisateur").isInt({ min: 1 })],
+  validate,
   ProgressionController.getByUser,
 );
 
 /**
- * Progressions d'une formation
+ * Progressions d'une formation (formateur propriétaire / admin)
  */
 router.get(
   "/formation/:id_formation",
   authMiddleware,
-  roleMiddleware(ROLES.ADMIN, ROLES.FORMATEUR),
+  roleMiddleware(ROLES.FORMATEUR, ROLES.ADMIN),
+  [param("id_formation").isInt({ min: 1 })],
+  validate,
   ProgressionController.getByFormation,
 );
 
 /**
- * Recalculer toutes les progressions d'une formation
- * (leçons terminées + quiz réussis + devoirs remis)
+ * Recalculer toutes les progressions d'une formation (admin)
  */
 router.post(
   "/formation/:id_formation/recompute",
   authMiddleware,
-  roleMiddleware(ROLES.ADMIN, ROLES.FORMATEUR),
+  roleMiddleware(ROLES.ADMIN),
+  [param("id_formation").isInt({ min: 1 })],
+  validate,
   ProgressionController.recompute,
-);
-
-/**
- * Une progression
- */
-router.get("/:id", authMiddleware, ProgressionController.show);
-
-/**
- * Créer une progression
- * (donnée calculée : admin / formateur uniquement)
- */
-router.post(
-  "/",
-  authMiddleware,
-  roleMiddleware(ROLES.ADMIN, ROLES.FORMATEUR),
-  createProgressionValidator,
-  validate,
-  ProgressionController.store,
-);
-
-/**
- * Modifier une progression
- * (donnée calculée : admin / formateur uniquement)
- */
-router.put(
-  "/:id",
-  authMiddleware,
-  roleMiddleware(ROLES.ADMIN, ROLES.FORMATEUR),
-  updateProgressionValidator,
-  validate,
-  ProgressionController.update,
-);
-
-/**
- * Supprimer une progression
- * (donnée calculée : admin / formateur uniquement)
- */
-router.delete(
-  "/:id",
-  authMiddleware,
-  roleMiddleware(ROLES.ADMIN, ROLES.FORMATEUR),
-  ProgressionController.destroy,
 );
 
 export default router;

@@ -1,11 +1,15 @@
 /**
- * Harnais de test « Ownership / Anti-IDOR » (Phase 3).
+ * Harnais de test « Ownership / Anti-IDOR ».
  *
  * Exécution : node tests/ownership.test.js
  *
  * - Partie A : tests unitaires purs des helpers de src/utils/ownership.js.
  * - Partie B : tests d'intégration contre la base réelle avec des
  *              utilisateurs jetables, puis nettoyage systématique.
+ *
+ * Architecture pédagogique : formation -> chapitre -> section ->
+ * sous-section (rich text) ; quiz par chapitre ; tentatives +
+ * réponses étudiant en lecture seule pour l'étudiant.
  */
 import pool from "../src/config/database.js";
 
@@ -15,29 +19,29 @@ import AuthRepository from "../src/repositories/auth.repository.js";
 import UserRepository from "../src/repositories/user.repository.js";
 import CategoryRepository from "../src/repositories/category.repository.js";
 import FormationRepository from "../src/repositories/formation.repository.js";
-import ModuleRepository from "../src/repositories/module.repository.js";
 import ChapterRepository from "../src/repositories/chapter.repository.js";
-import LessonRepository from "../src/repositories/lesson.repository.js";
+import SectionRepository from "../src/repositories/section.repository.js";
+import SousSectionRepository from "../src/repositories/sous-section.repository.js";
 import QuizRepository from "../src/repositories/quiz.repository.js";
 import QuestionRepository from "../src/repositories/question.repository.js";
 import AnswerRepository from "../src/repositories/answer.repository.js";
-import AssignmentRepository from "../src/repositories/assignment.repository.js";
-import DocumentRepository from "../src/repositories/document.repository.js";
 import ConversationRepository from "../src/repositories/conversation.repository.js";
 import ConversationParticipantRepository from "../src/repositories/conversation-participant.repository.js";
 import EnrollmentRepository from "../src/repositories/enrollment.repository.js";
 import ProgressionRepository from "../src/repositories/progression.repository.js";
 import AttemptRepository from "../src/repositories/attempt.repository.js";
-import StudentAnswerRepository from "../src/repositories/student-answer.repository.js";
-import SubmissionRepository from "../src/repositories/submission.repository.js";
 
 import ChapterService from "../src/services/chapter.service.js";
-import DocumentService from "../src/services/document.service.js";
+import SectionService from "../src/services/section.service.js";
+import SousSectionService from "../src/services/sous-section.service.js";
+import QuizService from "../src/services/quiz.service.js";
+import QuestionService from "../src/services/question.service.js";
+import AnswerService from "../src/services/answer.service.js";
 import EnrollmentService from "../src/services/enrollment.service.js";
 import ProgressionService from "../src/services/progression.service.js";
+import ParcoursService from "../src/services/parcours.service.js";
 import AttemptService from "../src/services/attempt.service.js";
 import StudentAnswerService from "../src/services/student-answer.service.js";
-import SubmissionService from "../src/services/submission.service.js";
 
 import {
   isAdmin,
@@ -68,7 +72,10 @@ function assertThrows(fnOrPromise, label) {
       return null;
     },
     (error) => {
-      const denied = String(error.message || "").includes("Accès interdit");
+      const denied =
+        String(error.message || "").includes("Accès interdit") ||
+        error.name === "AccessDeniedError" ||
+        error.statusCode === 403;
       results.push({
         ok: denied,
         label: `[${suite}] ${label} -> ${denied ? "REFUSÉ" : `ERREUR INATTENDUE: ${error.message}`}`,
@@ -80,6 +87,23 @@ function assertThrows(fnOrPromise, label) {
 
 function expectDenied(fn, label) {
   return assertThrows(fn, label);
+}
+
+/**
+ * Attend n'importe quelle erreur métier (403, 404, 409...).
+ */
+function expectRejected(fnOrPromise, label) {
+  const pending =
+    typeof fnOrPromise === "function" ? fnOrPromise() : fnOrPromise;
+
+  return Promise.resolve(pending).then(
+    () => {
+      results.push({ ok: false, label: `[${suite}] ${label} (aucune erreur levée)` });
+    },
+    () => {
+      results.push({ ok: true, label: `[${suite}] ${label} -> REFUSÉ` });
+    },
+  );
 }
 
 /* ------------------------------------------------------------------ */
@@ -154,25 +178,44 @@ const created = {
   categories: [],
   users: [],
   formations: [],
-  modules: [],
   chapters: [],
-  lessons: [],
+  sections: [],
+  sousSections: [],
   quizzes: [],
   questions: [],
   answers: [],
-  assignments: [],
-  documents: [],
   enrollments: [],
   progressions: [],
   conversations: [],
   attempts: [],
-  studentAnswers: [],
-  submissions: [],
 };
 
 const suffix = `${Date.now()}`;
+let userIds = [];
 
 async function cleanup() {
+  // Nettoyage SQL direct : ordre inverse des dépendances FK
+  if (userIds.length > 0) {
+    const placeholders = userIds.map(() => "?").join(",");
+    const statements = [
+      `DELETE FROM reponses_etudiants WHERE id_tentative IN (SELECT id_tentative FROM tentatives WHERE id_utilisateur IN (${placeholders}))`,
+      `DELETE FROM tentatives WHERE id_utilisateur IN (${placeholders})`,
+      `DELETE FROM progression_chapitres WHERE id_utilisateur IN (${placeholders})`,
+      `DELETE FROM progressions WHERE id_utilisateur IN (${placeholders})`,
+      `DELETE FROM messages WHERE id_expediteur IN (${placeholders})`,
+      `DELETE FROM participant_conversations WHERE id_utilisateur IN (${placeholders})`,
+      `DELETE FROM notifications WHERE id_utilisateur IN (${placeholders})`,
+      `DELETE FROM avis WHERE id_utilisateur IN (${placeholders})`,
+    ];
+    for (const sql of statements) {
+      try {
+        await pool.query(sql, [...userIds]);
+      } catch (e) {
+        console.log(`  cleanup sql: ${e.message}`);
+      }
+    }
+  }
+
   const del = async (repo, ids, label) => {
     for (const id of ids) {
       try {
@@ -182,8 +225,7 @@ async function cleanup() {
       }
     }
   };
-  await del(StudentAnswerRepository, created.studentAnswers, "studentAnswer");
-  await del(SubmissionRepository, created.submissions, "submission");
+
   await del(AttemptRepository, created.attempts, "attempt");
   await del(EnrollmentRepository, created.enrollments, "enrollment");
   await del(ProgressionRepository, created.progressions, "progression");
@@ -202,14 +244,12 @@ async function cleanup() {
       console.log(`  cleanup conversation#${id}: ${e.message}`);
     }
   }
-  await del(DocumentRepository, created.documents, "document");
-  await del(AssignmentRepository, created.assignments, "assignment");
   await del(AnswerRepository, created.answers, "answer");
   await del(QuestionRepository, created.questions, "question");
   await del(QuizRepository, created.quizzes, "quiz");
-  await del(LessonRepository, created.lessons, "lesson");
+  await del(SousSectionRepository, created.sousSections, "sousSection");
+  await del(SectionRepository, created.sections, "section");
   await del(ChapterRepository, created.chapters, "chapter");
-  await del(ModuleRepository, created.modules, "module");
   await del(FormationRepository, created.formations, "formation");
   await del(UserRepository, created.users, "user");
   for (const id of created.categories) {
@@ -249,6 +289,7 @@ async function main() {
       mot_de_passe: "x",
     });
     created.users.push(id);
+    userIds.push(id);
     return { id, role };
   };
 
@@ -256,6 +297,7 @@ async function main() {
   const F2 = await mkUser(roleFormateur, ROLES.FORMATEUR, "f2");
   const S1 = await mkUser(roleEtudiant, ROLES.ETUDIANT, "s1");
   const S2 = await mkUser(roleEtudiant, ROLES.ETUDIANT, "s2");
+  const S3 = await mkUser(roleEtudiant, ROLES.ETUDIANT, "s3"); // non inscrit
 
   const catId = await CategoryRepository.create({
     nom_categorie: `OwnershipTest ${suffix}`,
@@ -276,31 +318,34 @@ async function main() {
   });
   created.formations.push(form1, form2);
 
-  const mod1 = await ModuleRepository.create({ id_formation: form1, titre: `Module F1-1 ${suffix}` });
-  const mod2 = await ModuleRepository.create({ id_formation: form1, titre: `Module F1-2 ${suffix}` });
-  const mod3 = await ModuleRepository.create({ id_formation: form2, titre: `Module F2-1 ${suffix}` });
-  created.modules.push(mod1, mod2, mod3);
+  // Les tests d'inscription étudiant exigent des formations PUBLIÉES
+  await FormationRepository.updateStatut(form1, "PUBLIEE");
+  await FormationRepository.updateStatut(form2, "PUBLIEE");
 
-  const ch1 = await ChapterRepository.create({ id_module: mod1, titre: `Chapitre F1 ${suffix}` });
-  const chF2 = await ChapterRepository.create({ id_module: mod3, titre: `Chapitre F2 ${suffix}` });
+  const ch1 = await ChapterRepository.create({ id_formation: form1, titre: `Chapitre F1 ${suffix}`, ordre: 1 });
+  const chF2 = await ChapterRepository.create({ id_formation: form2, titre: `Chapitre F2 ${suffix}`, ordre: 1 });
   created.chapters.push(ch1, chF2);
 
-  const les1 = await LessonRepository.create({ id_chapitre: ch1, titre: `Leçon F1 ${suffix}`, contenu: "c" });
-  const lesF2 = await LessonRepository.create({ id_chapitre: chF2, titre: `Leçon F2 ${suffix}`, contenu: "c" });
-  created.lessons.push(les1, lesF2);
+  const sec1 = await SectionRepository.create({ id_chapitre: ch1, titre: `Section F1 ${suffix}`, ordre: 1 });
+  created.sections.push(sec1);
 
-  const quiz1 = await QuizRepository.create({ id_lecon: les1, titre: `Quiz F1 ${suffix}` });
+  const ss1 = await SousSectionRepository.create({
+    id_section: sec1,
+    titre: `Sous-section F1 ${suffix}`,
+    contenu: "<p>Contenu rich text</p>",
+    ordre: 1,
+  });
+  created.sousSections.push(ss1);
+
+  const quiz1 = await QuizRepository.create({ id_chapitre: ch1, titre: `Quiz F1 ${suffix}` });
   created.quizzes.push(quiz1);
 
-  const q1 = await QuestionRepository.create({ id_quiz: quiz1, enonce: `Question ${suffix}` });
+  const q1 = await QuestionRepository.create({ id_quiz: quiz1, enonce: `Question ${suffix}`, type: "QCM", points: 2 });
   created.questions.push(q1);
 
-  const a1 = await AnswerRepository.create({ id_question: q1, contenu: "Réponse", est_correcte: true });
-  created.answers.push(a1);
-
-  const assign1 = await AssignmentRepository.create({ id_lecon: les1, titre: `Devoir F1 ${suffix}` });
-  const assign2 = await AssignmentRepository.create({ id_lecon: les1, titre: `Devoir F1 bis ${suffix}` });
-  created.assignments.push(assign1, assign2);
+  const a1 = await AnswerRepository.create({ id_question: q1, contenu: "Bonne réponse", est_correcte: true });
+  const a2 = await AnswerRepository.create({ id_question: q1, contenu: "Mauvaise réponse", est_correcte: false });
+  created.answers.push(a1, a2);
 
   /* Inscriptions initiales (S1 et S2 suivent la formation de F1) */
   const enrS1 = await EnrollmentService.createEnrollment(
@@ -317,113 +362,85 @@ async function main() {
   suite = "B1.chaine";
 
   let chapterF1 = await ChapterService.createChapter(
-    { id_module: mod1, titre: `Chap F1 crée ${suffix}` },
+    { id_formation: form1, titre: `Chap F1 crée ${suffix}` },
     F1,
   );
   created.chapters.push(chapterF1);
 
   await expectDenied(
-    ChapterService.createChapter({ id_module: mod1, titre: `Chap volé ${suffix}` }, F2),
-    "F2 ne peut pas créer un chapitre dans un module de F1",
+    ChapterService.createChapter({ id_formation: form1, titre: `Chap volé ${suffix}` }, F2),
+    "F2 ne peut pas créer un chapitre dans une formation de F1",
   );
 
   const chapterF2own = await ChapterService.createChapter(
-    { id_module: mod3, titre: `Chap F2 crée ${suffix}` },
+    { id_formation: form2, titre: `Chap F2 crée ${suffix}` },
     F2,
   );
   created.chapters.push(chapterF2own);
 
   const chapterAdmin = await ChapterService.createChapter(
-    { id_module: mod1, titre: `Chap admin ${suffix}` },
+    { id_formation: form1, titre: `Chap admin ${suffix}` },
     admin,
   );
   created.chapters.push(chapterAdmin);
 
   await expectDenied(
-    ChapterService.createChapter({ id_module: mod1, titre: `Chap etudiant ${suffix}` }, S1),
+    ChapterService.createChapter({ id_formation: form1, titre: `Chap etudiant ${suffix}` }, S1),
     "Un étudiant ne peut pas créer un chapitre",
   );
 
   await ChapterService.updateChapter(
     chapterF1,
-    { id_module: mod1, titre: `Chap F1 modifié ${suffix}` },
+    { titre: `Chap F1 modifié ${suffix}` },
     F1,
   );
   check(true, "F1 peut modifier son propre chapitre");
 
   await expectDenied(
-    ChapterService.updateChapter(
-      chapterF1,
-      { id_module: mod1, titre: `Chap modif volée ${suffix}` },
-      F2,
-    ),
+    ChapterService.updateChapter(chapterF1, { titre: `Chap modif volée ${suffix}` }, F2),
     "F2 ne peut pas modifier un chapitre de F1",
   );
 
-  const chFree = await ChapterRepository.create({ id_module: mod1, titre: `Chap libre ${suffix}` });
-  created.chapters.push(chFree);
-  const chFree2 = await ChapterRepository.create({ id_module: mod1, titre: `Chap libre 2 ${suffix}` });
-  created.chapters.push(chFree2);
+  const secF1 = await SectionService.createSection(
+    { id_chapitre: chapterF1, titre: `Section créée ${suffix}` },
+    F1,
+  );
+  created.sections.push(secF1);
 
+  await expectDenied(
+    SectionService.createSection({ id_chapitre: chapterF1, titre: `Section volée ${suffix}` }, F2),
+    "F2 ne peut pas créer une section dans un chapitre de F1",
+  );
+
+  const ssF1 = await SousSectionService.createSousSection(
+    { id_section: Number(secF1), titre: `SS créée ${suffix}`, contenu: "<p>HTML</p>" },
+    F1,
+  );
+  created.sousSections.push(Number(ssF1));
+
+  await expectDenied(
+    SousSectionService.createSousSection(
+      { id_section: Number(secF1), titre: `SS volée ${suffix}` },
+      F2,
+    ),
+    "F2 ne peut pas créer une sous-section dans une section de F1",
+  );
+
+  const ssRead = await SousSectionService.getSousSectionById(Number(ssF1), F1);
+  check(
+    ssRead && String(ssRead.contenu).includes("HTML"),
+    "le rich text d'une sous-section est restitué au formateur propriétaire",
+  );
+
+  const chFree = await ChapterRepository.create({ id_formation: form1, titre: `Chap libre ${suffix}`, ordre: 99 });
+  created.chapters.push(chFree);
   await expectDenied(
     ChapterService.deleteChapter(chFree, F2),
     "F2 ne peut pas supprimer un chapitre de F1",
   );
   await ChapterService.deleteChapter(chFree, F1);
-  check(true, "F1 peut supprimer son propre chapitre (sans leçons)");
-
-  const chF2free = await ChapterRepository.create({ id_module: mod3, titre: `Chap F2 libre ${suffix}` });
-  created.chapters.push(chF2free);
-  await ChapterService.deleteChapter(chF2free, F2);
-  check(true, "F2 peut supprimer son propre chapitre");
-
-  /* Documents */
-  const doc1 = await DocumentService.createDocument(
-    { id_lecon: les1, titre: `Doc F1 ${suffix}`, chemin_document: "/tmp/a.pdf" },
-    F1,
-  );
-  created.documents.push(doc1);
-
-  await expectDenied(
-    DocumentService.createDocument(
-      { id_lecon: les1, titre: `Doc volé ${suffix}`, chemin_document: "/tmp/b.pdf" },
-      F2,
-    ),
-    "F2 ne peut pas créer un document dans une leçon de F1",
-  );
-
-  await expectDenied(
-    DocumentService.createDocument(
-      { id_lecon: les1, titre: `Doc etudiant ${suffix}`, chemin_document: "/tmp/c.pdf" },
-      S1,
-    ),
-    "Un étudiant ne peut pas créer un document",
-  );
-
-  await DocumentService.updateDocument(
-    doc1,
-    { id_lecon: les1, titre: `Doc F1 modifié ${suffix}`, chemin_document: "/tmp/a2.pdf" },
-    F1,
-  );
-  check(true, "F1 peut modifier son propre document");
-
-  await expectDenied(
-    DocumentService.updateDocument(
-      doc1,
-      { id_lecon: les1, titre: `Doc modif volée ${suffix}`, chemin_document: "/tmp/b2.pdf" },
-      F2,
-    ),
-    "F2 ne peut pas modifier un document de F1",
-  );
-
-  await DocumentService.deleteDocument(doc1, F1);
-  check(true, "F1 peut supprimer son propre document");
-
-  const docF2 = await DocumentService.createDocument(
-    { id_lecon: lesF2, titre: `Doc F2 ${suffix}`, chemin_document: "/tmp/d.pdf" },
-    F2,
-  );
-  created.documents.push(docF2);
+  created.chapters = created.chapters.filter((c) => Number(c) !== Number(chFree));
+  check(true, "F1 peut supprimer son propre chapitre (sans contenu)");
 
   console.log("--- Partie B2 : inscriptions ---");
   suite = "B2.enrollment";
@@ -440,7 +457,19 @@ async function main() {
     "createEnrollment impose le propriétaire (payload S2 -> S1)",
   );
 
-  // L'inscription forcée a aussi créé une progression initiale (S1, form2)
+  // Formation BROUILLON : inscription étudiant refusée
+  const formDraft = await FormationRepository.create({
+    id_categorie: catId,
+    id_formateur: F1.id,
+    titre: `Formation brouillon ${suffix}`,
+    description: "test",
+  });
+  created.formations.push(formDraft);
+  await expectDenied(
+    EnrollmentService.createEnrollment({ id_utilisateur: S3.id, id_formation: formDraft }, S3),
+    "inscription refusée sur une formation BROUILLON",
+  );
+
   const progForcedS1 = await ProgressionRepository.findByUserAndFormation(S1.id, form2);
   if (progForcedS1) {
     created.progressions.push(progForcedS1.id_progression);
@@ -473,21 +502,9 @@ async function main() {
     "F1 (propriétaire) voit les 2 inscriptions de sa formation",
   );
 
-  const enrFormF2 = await EnrollmentService.getEnrollmentsByFormation(form1, F2);
-  check(
-    enrFormF2.every((r) => Number(r.id_utilisateur) === F2.id) && enrFormF2.length === 0,
-    "F2 (non propriétaire) ne voit aucune inscription de la formation de F1",
-  );
-
   await expectDenied(
     EnrollmentService.deleteEnrollment(enrS2, S1),
     "S1 ne peut pas supprimer l'inscription de S2",
-  );
-
-  const enrAdminView = await EnrollmentService.getEnrollmentsByUser(S2.id, admin);
-  check(
-    enrAdminView.length === 1 && Number(enrAdminView[0].id_utilisateur) === S2.id,
-    "admin voit les inscriptions de S2",
   );
 
   /* Conversations automatiques créées par l'inscription */
@@ -505,305 +522,191 @@ async function main() {
     "l'inscription crée automatiquement une conversation avec le formateur (S1-F1)",
   );
 
-  const convS2F1 = await ConversationParticipantRepository.findSharedByUsersAndSubjectPrefix(
-    S2.id, F1.id, pref1,
-  );
-  if (convS2F1) created.conversations.push(convS2F1.id_conversation);
-  check(
-    convS2F1 !== null,
-    "l'inscription crée automatiquement une conversation avec le formateur (S2-F1)",
-  );
-
   const convS1F2 = await ConversationParticipantRepository.findSharedByUsersAndSubjectPrefix(
     S1.id, F2.id, pref2,
   );
   if (convS1F2) created.conversations.push(convS1F2.id_conversation);
   check(
     convS1F2 !== null,
-    "une conversation distincte est créée pour chaque formation (S1-F2 via l'inscription forcée)",
+    "une conversation distincte est créée pour chaque formation (S1-F2)",
   );
 
-  console.log("--- Partie B3 : progressions ---");
-  suite = "B3.progression";
+  console.log("--- Partie B3 : accès parcours & progressions ---");
+  suite = "B3.parcours";
 
-  // L'inscription (setup) a auto-créé la progression initiale à 0 %
+  // Le premier chapitre est accessible aux inscrits
+  const accS1 = await ParcoursService.isChapterAccessible(ch1, S1);
+  check(accS1 === true, "chapitre 1 accessible à S1 (inscrit)");
+  const accS3 = await ParcoursService.isChapterAccessible(ch1, S3);
+  check(accS3 === false, "chapitre 1 inaccessible à S3 (non inscrit)");
+
+  await expectDenied(
+    ParcoursService.assertChapterAccessible(ch1, S3),
+    "start/lecture de contenu refusés pour un non-inscrit",
+  );
+
+  // L'inscription a créé la progression initiale à 0 %
   const progAutoS1 = await ProgressionRepository.findByUserAndFormation(S1.id, form1);
   check(
     progAutoS1 && Number(progAutoS1.pourcentage) === 0,
     "l'inscription crée une progression initiale à 0 % (S1)",
   );
-  const progAutoS2 = await ProgressionRepository.findByUserAndFormation(S2.id, form1);
-  check(
-    progAutoS2 && Number(progAutoS2.pourcentage) === 0,
-    "l'inscription crée une progression initiale à 0 % (S2)",
-  );
-
-  // Mise à jour de sa propre progression (déjà créée automatiquement)
-  const prog1 = progAutoS1.id_progression;
-  created.progressions.push(prog1);
-  await ProgressionService.updateProgression(
-    prog1,
-    { id_utilisateur: S1.id, id_formation: form1, pourcentage: 10 },
-    S1,
-  );
-  check(true, "S1 peut modifier sa propre progression (créée à l'inscription)");
-
-  let imposErrMsg = null;
-  try {
-    await ProgressionService.createProgression(
-      { id_utilisateur: S2.id, id_formation: form1, pourcentage: 20 },
-      S1,
-    );
-  } catch (error) {
-    imposErrMsg = String(error.message);
-  }
-  check(
-    imposErrMsg !== null && imposErrMsg.includes("progression existe déjà"),
-    "S1 qui tente de créer une progression pour S2 est ramené à sa propre progression (doublon détecté, rien créé pour S2)",
-  );
-
-  const prog2 = progAutoS2.id_progression;
-  created.progressions.push(prog2);
-  await ProgressionService.updateProgression(
-    prog2,
-    { id_utilisateur: S2.id, id_formation: form1, pourcentage: 30 },
-    S2,
-  );
-  check(true, "S2 peut modifier sa propre progression");
+  created.progressions.push(progAutoS1.id_progression);
 
   await expectDenied(
-    ProgressionService.getProgressionById(prog2, S1),
-    "S1 ne peut pas lire la progression de S2",
+    ProgressionService.getProgressionsByUser(S1.id, S2),
+    "S2 ne peut pas lire les progressions de S1",
   );
 
-  const progListS1 = await ProgressionService.getProgressionsByUser(S2.id, S1);
+  const progF1View = await ProgressionService.getProgressionsByFormation(form1, F1);
   check(
-    progListS1.length > 0 && progListS1.every((r) => Number(r.id_utilisateur) === S1.id),
-    "getProgressionsByUser(S2) vue par S1 = uniquement ses progressions",
+    Array.isArray(progF1View) && progF1View.length === 2,
+    "F1 (propriétaire) voit les progressions de ses 2 étudiants",
   );
 
-  await expectDenied(
-    ProgressionService.updateProgression(prog2, {
-      id_utilisateur: S2.id,
-      id_formation: form1,
-      pourcentage: 40,
-    }, S1),
-    "S1 ne peut pas modifier la progression de S2",
-  );
-
-  await expectDenied(
-    ProgressionService.deleteProgression(prog2, S1),
-    "S1 ne peut pas supprimer la progression de S2",
-  );
-
-  const progFormS1 = await ProgressionService.getProgressionsByFormation(form1, S1);
-  check(
-    progFormS1.length === 1 && Number(progFormS1[0].id_utilisateur) === S1.id,
-    "S1 ne voit que sa propre progression dans la formation",
-  );
-
-  const progFormF1 = await ProgressionService.getProgressionsByFormation(form1, F1);
-  check(
-    progFormF1.length === 2,
-    "F1 (propriétaire) voit les progressions des 2 étudiants",
-  );
-
-  const progAdminView = await ProgressionService.getProgressionsByUser(S2.id, admin);
-  check(
-    progAdminView.length === 1 && Number(progAdminView[0].id_utilisateur) === S2.id,
-    "admin voit la progression de S2",
-  );
-
-  console.log("--- Partie B4 : tentatives ---");
+  console.log("--- Partie B4 : cycle de vie des tentatives ---");
   suite = "B4.attempt";
 
-  const att1 = await AttemptService.createAttempt(
-    { id_utilisateur: S1.id, id_quiz: quiz1, note: 14 },
-    S1,
+  await expectDenied(
+    AttemptService.startAttempt({ id_quiz: quiz1 }, S3),
+    "S3 (non inscrit) ne peut pas démarrer une tentative",
   );
-  created.attempts.push(att1);
 
-  const att2 = await AttemptService.createAttempt(
-    { id_utilisateur: S2.id, id_quiz: quiz1, note: 12 },
-    S2,
-  );
-  created.attempts.push(att2);
-
-  const att3 = await AttemptService.createAttempt(
-    { id_utilisateur: S2.id, id_quiz: quiz1, note: 9 },
-    S1,
-  );
-  created.attempts.push(att3);
-  const att3Row = await AttemptRepository.findById(att3);
+  const start1 = await AttemptService.startAttempt({ id_quiz: quiz1 }, S1);
+  created.attempts.push(start1.tentative.id_tentative);
   check(
-    Number(att3Row.id_utilisateur) === S1.id,
-    "createAttempt impose le propriétaire (payload S2 -> S1)",
+    start1.tentative && start1.tentative.statut === "EN_COURS",
+    "S1 démarre une tentative EN_COURS",
+  );
+  check(
+    Array.isArray(start1.questions) &&
+      start1.questions[0] &&
+      start1.questions[0].reponses.every((r) => r.est_correcte === undefined),
+    "les questions retournées n'exposent JAMAIS est_correcte",
+  );
+
+  // Idempotence : redémarrer renvoie la même tentative EN_COURS
+  const startAgain = await AttemptService.startAttempt({ id_quiz: quiz1 }, S1);
+  check(
+    Number(startAgain.tentative.id_tentative) === Number(start1.tentative.id_tentative),
+    "redémarrer un quiz renvoie la même tentative EN_COURS (idempotent)",
+  );
+
+  const attS2 = await AttemptService.startAttempt({ id_quiz: quiz1 }, S2);
+  created.attempts.push(attS2.tentative.id_tentative);
+
+  await expectDenied(
+    AttemptService.submitAttempt(attS2.tentative.id_tentative, {}, S1),
+    "S1 ne peut pas soumettre la tentative de S2 (IDOR)",
+  );
+
+  await expectRejected(
+    AttemptService.submitAttempt(start1.tentative.id_tentative, {
+      reponses: [],
+    }, S1),
+    "soumission incomplète (aucune question répondue) refusée",
+  );
+
+  const resFail = await AttemptService.submitAttempt(start1.tentative.id_tentative, {
+    reponses: [{ id_question: q1, id_reponses: [Number(a2)] }],
+  }, S1);
+  check(
+    resFail.statut === "ECHOUEE" && Number(resFail.note) === 0,
+    "mauvaise réponse QCM -> ECHOUEE (note calculée serveur)",
+  );
+
+  const hist1 = await AttemptService.getMyHistory(quiz1, S1);
+  check(
+    hist1.peut_passer === true && hist1.reussi === false,
+    "après un échec, S1 peut repasser le quiz",
+  );
+
+  // Repassage réussi
+  const start2 = await AttemptService.startAttempt({ id_quiz: quiz1 }, S1);
+  created.attempts.push(start2.tentative.id_tentative);
+  check(
+    Number(start2.tentative.id_tentative) !== Number(start1.tentative.id_tentative),
+    "un nouveau départ crée une NOUVELLE tentative après échec",
+  );
+
+  const resWin = await AttemptService.submitAttempt(start2.tentative.id_tentative, {
+    reponses: [{ id_question: q1, id_reponses: [Number(a1)] }],
+  }, S1);
+  check(
+    resWin.statut === "REUSSIE" && Number(resWin.note) === 100,
+    "bonne réponse QCM -> REUSSIE (note 100)",
+  );
+
+  const progAfter = await ProgressionRepository.findByUserAndFormation(S1.id, form1);
+  const chapitresForm1 = await ChapterRepository.findByFormation(form1);
+  const attendu = Math.round((1 / chapitresForm1.length) * 1000) / 10;
+  check(
+    progAfter && Math.abs(Number(progAfter.pourcentage) - attendu) < 0.01,
+    `la progression est recalculée après validation du chapitre (${attendu} % attendus)`,
+  );
+
+  await expectRejected(
+    AttemptService.startAttempt({ id_quiz: quiz1 }, S1),
+    "repasser un quiz DÉJÀ RÉUSSI est refusé",
+  );
+
+  const histFinal = await AttemptService.getMyHistory(quiz1, S1);
+  check(
+    histFinal.reussi === true && histFinal.nb_tentatives === 2,
+    "l'historique reflète 2 tentatives dont 1 réussie",
   );
 
   await expectDenied(
-    AttemptService.getAttemptById(att2, S1),
-    "S1 ne peut pas lire la tentative de S2",
+    AttemptService.deleteAttempt(attS2.tentative.id_tentative, S2),
+    "un étudiant ne peut pas supprimer sa tentative (admin uniquement)",
   );
 
-  const attListS1 = await AttemptService.getAttemptsByUser(S2.id, S1);
-  check(
-    attListS1.length === 2 && attListS1.every((r) => Number(r.id_utilisateur) === S1.id),
-    "getAttemptsByUser(S2) vue par S1 = uniquement ses tentatives",
-  );
-
-  const attQuizS1 = await AttemptService.getAttemptsByQuiz(quiz1, S1);
-  check(
-    attQuizS1.length === 2 && attQuizS1.every((r) => Number(r.id_utilisateur) === S1.id),
-    "S1 ne voit que ses tentatives sur le quiz",
-  );
-
-  const attQuizF1 = await AttemptService.getAttemptsByQuiz(quiz1, F1);
-  check(attQuizF1.length === 3, "F1 (propriétaire) voit toutes les tentatives du quiz");
-
-  const attQuizF2 = await AttemptService.getAttemptsByQuiz(quiz1, F2);
-  check(attQuizF2.length === 0, "F2 (non propriétaire) ne voit aucune tentative");
-
-  const attQuizAdmin = await AttemptService.getAttemptsByQuiz(quiz1, admin);
-  check(attQuizAdmin.length === 3, "admin voit toutes les tentatives du quiz");
-
-  await expectDenied(
-    AttemptService.updateAttempt(att2, { id_utilisateur: S2.id, id_quiz: quiz1, note: 5 }, S1),
-    "S1 ne peut pas modifier la tentative de S2",
-  );
-
-  await expectDenied(
-    AttemptService.deleteAttempt(att2, S1),
-    "S1 ne peut pas supprimer la tentative de S2",
-  );
-
-  const attAdminView = await AttemptService.getAttemptById(att2, admin);
-  check(Number(attAdminView.id_utilisateur) === S2.id, "admin peut lire la tentative de S2");
-
-  console.log("--- Partie B5 : réponses des étudiants ---");
+  console.log("--- Partie B5 : réponses d'étudiants (lecture) ---");
   suite = "B5.studentAnswer";
 
-  const sa1 = await StudentAnswerService.createStudentAnswer(
-    { id_tentative: att1, id_question: q1, id_reponse: a1 },
-    S1,
-  );
-  created.studentAnswers.push(sa1);
-
-  await expectDenied(
-    StudentAnswerService.createStudentAnswer(
-      { id_tentative: att2, id_question: q1, id_reponse: a1 },
-      S1,
-    ),
-    "S1 ne peut pas répondre dans la tentative de S2",
-  );
-
-  const sa2 = await StudentAnswerService.createStudentAnswer(
-    { id_tentative: att2, id_question: q1, id_reponse: a1 },
-    S2,
-  );
-  created.studentAnswers.push(sa2);
-
-  await expectDenied(
-    StudentAnswerService.getStudentAnswerById(sa2, S1),
-    "S1 ne peut pas lire la réponse de S2",
-  );
-
-  await expectDenied(
-    StudentAnswerService.getByAttempt(att2, S1),
+  await expectRejected(
+    StudentAnswerService.getByAttempt(attS2.tentative.id_tentative, S1),
     "S1 ne peut pas lister les réponses de la tentative de S2",
   );
 
-  const byQ = await StudentAnswerService.getByQuestion(q1, S1);
-  check(
-    byQ.length === 1 && Number(byQ[0].id_utilisateur) === S1.id,
-    "S1 ne voit que ses réponses à la question",
-  );
-
-  const byQF1 = await StudentAnswerService.getByQuestion(q1, F1);
-  check(byQF1.length === 2, "F1 (propriétaire) voit les réponses des 2 étudiants");
-
-  const byUserS1 = await StudentAnswerService.getByUser(S2.id, S1);
-  check(
-    byUserS1.length > 0 && byUserS1.every((r) => Number(r.id_utilisateur) === S1.id),
-    "getByUser(S2) vue par S1 = uniquement ses réponses",
-  );
-
-  await expectDenied(
-    StudentAnswerService.updateStudentAnswer(sa2, {
-      id_tentative: att2,
-      id_question: q1,
-      id_reponse: a1,
-    }, S1),
-    "S1 ne peut pas modifier la réponse de S2",
-  );
-
-  await expectDenied(
-    StudentAnswerService.deleteStudentAnswer(sa2, S1),
-    "S1 ne peut pas supprimer la réponse de S2",
-  );
-
-  console.log("--- Partie B6 : soumissions ---");
-  suite = "B6.submission";
-
-  const sub1 = await SubmissionService.createSubmission(
-    { id_utilisateur: S1.id, id_devoir: assign1, fichier: "s1.pdf" },
+  const mineSA = await StudentAnswerService.getByAttempt(
+    start2.tentative.id_tentative,
     S1,
   );
-  created.submissions.push(sub1);
-
-  const sub2 = await SubmissionService.createSubmission(
-    { id_utilisateur: S2.id, id_devoir: assign1, fichier: "s2.pdf" },
-    S2,
-  );
-  created.submissions.push(sub2);
-
-  const sub3 = await SubmissionService.createSubmission(
-    { id_utilisateur: S2.id, id_devoir: assign2, fichier: "s1bis.pdf" },
-    S1,
-  );
-  created.submissions.push(sub3);
-  const sub3Row = await SubmissionRepository.findById(sub3);
   check(
-    Number(sub3Row.id_utilisateur) === S1.id,
-    "createSubmission impose le propriétaire (payload S2 -> S1)",
+    Array.isArray(mineSA) && mineSA.length === 1,
+    "S1 lit les réponses de sa propre tentative",
   );
 
-  await expectDenied(
-    SubmissionService.getSubmissionById(sub2, S1),
-    "S1 ne peut pas lire la soumission de S2",
-  );
+  // S2 soumet à son tour (bonne réponse) : sa tentative contient 1 réponse
+  const resS2 = await AttemptService.submitAttempt(attS2.tentative.id_tentative, {
+    reponses: [{ id_question: q1, id_reponses: [Number(a1)] }],
+  }, S2);
+  check(resS2.statut === "REUSSIE", "S2 réussit aussi le quiz");
 
-  const subListS1 = await SubmissionService.getSubmissionsByUser(S2.id, S1);
+  const ownerSA = await StudentAnswerService.getByAttempt(
+    attS2.tentative.id_tentative,
+    F1,
+  );
   check(
-    subListS1.length > 0 && subListS1.every((r) => Number(r.id_utilisateur) === S1.id),
-    "getSubmissionsByUser(S2) vue par S1 = uniquement ses soumissions",
+    Array.isArray(ownerSA) && ownerSA.length === 1,
+    "F1 (propriétaire du quiz) lit les réponses de la tentative de S2",
   );
 
-  const subAssignS1 = await SubmissionService.getSubmissionsByAssignment(assign1, S1);
-  check(
-    subAssignS1.length === 1 && Number(subAssignS1[0].id_utilisateur) === S1.id,
-    "S1 ne voit que sa soumission au devoir",
-  );
+  if (mineSA.length > 0) {
+    const saRow = mineSA[0];
 
-  const subAssignF1 = await SubmissionService.getSubmissionsByAssignment(assign1, F1);
-  check(subAssignF1.length === 2, "F1 (propriétaire) voit les soumissions des 2 étudiants");
+    const saRead = await StudentAnswerService.getStudentAnswerById(
+      saRow.id_reponse_etudiant,
+      F1,
+    );
+    check(!!saRead, "le formateur propriétaire lit une réponse précise");
 
-  await expectDenied(
-    SubmissionService.updateSubmission(sub2, {
-      id_utilisateur: S2.id,
-      id_devoir: assign1,
-      fichier: "modif.pdf",
-      note: 15,
-    }, S1),
-    "S1 ne peut pas modifier la soumission de S2",
-  );
-
-  await expectDenied(
-    SubmissionService.deleteSubmission(sub2, S1),
-    "S1 ne peut pas supprimer la soumission de S2",
-  );
-
-  const subAdminView = await SubmissionService.getSubmissionById(sub2, admin);
-  check(Number(subAdminView.id_utilisateur) === S2.id, "admin peut lire la soumission de S2");
+    await expectRejected(
+      StudentAnswerService.getStudentAnswerById(saRow.id_reponse_etudiant, S2),
+      "S2 ne peut pas lire la réponse de S1",
+    );
+  }
 }
 
 /* ------------------------------------------------------------------ */

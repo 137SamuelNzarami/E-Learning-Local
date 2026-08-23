@@ -17,9 +17,10 @@ import ROLES from "../constants/role.js";
 
 const router = Router();
 
-router.get("/", authMiddleware, QuestionController.index);
-
+// Questions d'un quiz (étudiant autorisé : réponses SANS indicateur de correction)
 router.get("/quiz/:id_quiz", authMiddleware, QuestionController.getByQuiz);
+
+router.get("/", authMiddleware, roleMiddleware(ROLES.ADMIN, ROLES.FORMATEUR), QuestionController.index);
 
 router.get("/:id", authMiddleware, QuestionController.show);
 

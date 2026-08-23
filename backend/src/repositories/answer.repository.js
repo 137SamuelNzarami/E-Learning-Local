@@ -60,7 +60,7 @@ class AnswerRepository {
     return rows;
   }
   /**
-   * Créer une réponse
+   * Créer une réponse (QCM uniquement : une question LIBRE n'a pas de choix)
    */
   async create(data) {
     const [result] = await pool.query(
@@ -78,19 +78,30 @@ class AnswerRepository {
     return result.insertId;
   }
   /**
-   * Modifier une réponse
+   * Modifier une réponse (partiel)
    */
   async update(id, data) {
+    const sets = [];
+    const values = [];
+
+    if (data.contenu !== undefined) {
+      sets.push("contenu = ?");
+      values.push(data.contenu);
+    }
+    if (data.est_correcte !== undefined) {
+      sets.push("est_correcte = ?");
+      values.push(data.est_correcte ? 1 : 0);
+    }
+
+    if (sets.length === 0) {
+      return 0;
+    }
+
+    values.push(id);
+
     const [result] = await pool.query(
-      `
-            UPDATE reponses
-            SET
-                id_question = ?,
-                contenu = ?,
-                est_correcte = ?
-            WHERE id_reponse = ?
-            `,
-      [data.id_question, data.contenu, data.est_correcte ?? false, id],
+      "UPDATE reponses SET " + sets.join(", ") + " WHERE id_reponse = ?",
+      values,
     );
     return result.affectedRows;
   }

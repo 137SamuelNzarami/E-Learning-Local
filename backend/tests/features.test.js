@@ -217,14 +217,19 @@ async function main() {
     check(r.status === 401, `login invalide -> 401 (actuel ${r.status})`);
   }
 
-  /* --- 8. Rôles inchangés : étudiant interdit sur /api/progressions POST --- */
+  /* --- 8. Rôles : la progression n'est plus une donnée écrivable ---
+   * POST /api/progressions n'existe plus (donnée calculée serveur).
+   * L'étudiant consulte sa progression via GET /api/progressions/me.
+   */
   {
-    const r = await call("POST", "/api/progressions", S1.token, {
+    const r = await call("GET", "/api/progressions/me", S1.token);
+    check(r.status === 200, `GET /progressions/me étudiant -> 200 (actuel ${r.status})`);
+    const w = await call("POST", "/api/progressions", S1.token, {
       id_utilisateur: S1.id_utilisateur,
       id_formation: 1,
       pourcentage: 50,
     });
-    check(r.status === 403, `POST /progressions étudiant -> 403 (actuel ${r.status})`);
+    check(w.status === 404 || w.status === 403, `POST /progressions (supprimé) -> 404/403 (actuel ${w.status})`);
   }
 
   await new Promise((resolve) => server.close(resolve));

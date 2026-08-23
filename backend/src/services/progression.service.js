@@ -1,276 +1,203 @@
+import pool from "../config/database.js";
+import ChapterRepository from "../repositories/chapter.repository.js";
 import ProgressionRepository from "../repositories/progression.repository.js";
-
-import UserRepository from "../repositories/user.repository.js";
-
 import FormationRepository from "../repositories/formation.repository.js";
-
 import EnrollmentRepository from "../repositories/enrollment.repository.js";
+import ParcoursService from "./parcours.service.js";
+import ROLES from "../constants/role.js";
+import { AccessDeniedError, NotFoundError } from "../utils/app-errors.js";
+import { canAccessFormation, isAdmin } from "../utils/ownership.js";
 
-import ProgressionLeconService from "./progression-lecon.service.js";
-
-import { handleDatabaseError } from "../utils/database-errors.js";
-import {
-  assertPersonalAccess,
-  imposeOwnership,
-  scopePersonalRowsByFormation,
-  scopeToUser,
-} from "../utils/ownership.js";
-import {
-  AccessDeniedError,
-  ConflictError,
-  NotFoundError,
-  ValidationError,
-} from "../utils/app-errors.js";
-
+/**
+ * PROGRESSION — source de vérité : le BACKEND.
+ *
+ * pourcentage = chapitres VALIDÉS / chapitres TOTAUX × 100
+ *
+ * Un chapitre est validé par :
+ *   - la réussite de son quiz de fin de chapitre (tentatives REUSSIE) ;
+ *   - ou, s'il n'a pas de quiz, son marquage explicite comme terminé
+ *     par l'étudiant inscrit.
+ *
+ * Le frontend ne peut jamais écrire un pourcentage arbitraire :
+ * la valeur est recalculée et persistée côté serveur.
+ */
 class ProgressionService {
   /**
-   * Récupérer toutes les progressions
+   * Toutes les progressions (admin)
    */
   async getAllProgressions() {
     return await ProgressionRepository.findAll();
   }
+
   /**
-   * Récupérer une progression par son ID
-   */
-  async getProgressionById(id, user) {
-    const progression = await ProgressionRepository.findById(id);
-
-    if (!progression) {
-      throw new NotFoundError("Progression introuvable.");
-    }
-
-    // IDOR : un non-admin ne peut lire que ses propres progressions
-    assertPersonalAccess(user, progression.id_utilisateur);
-
-    return progression;
-  }
-  /**
-   * Récupérer les progressions d'un utilisateur
+   * Progressions d'un utilisateur
+   *
+   * - Étudiant : uniquement les siennes (IDOR).
+   * - Formateur : celles de ses étudiants.
+   * - Admin : toutes.
    */
   async getProgressionsByUser(id_utilisateur, user) {
-    const idCible = scopeToUser(user, id_utilisateur);
+    const idCible = Number(id_utilisateur);
 
-    const utilisateur = await UserRepository.findById(idCible);
+    if (!isAdmin(user) && idCible !== Number(user.id)) {
+      // un étudiant ne peut lire que ses propres progressions ;
+      // un formateur doit posséder au moins une formation commune.
+      if (user.role !== ROLES.FORMATEUR) {
+        throw new AccessDeniedError(
+          "Accès interdit. Cette ressource ne vous appartient pas.",
+        );
+      }
 
-    if (!utilisateur) {
-      throw new NotFoundError("Utilisateur introuvable.");
+      const partage = await this._sharesFormation(user.id, idCible);
+      if (!partage) {
+        throw new AccessDeniedError(
+          "Accès interdit. Cet utilisateur n'est pas inscrit à vos formations.",
+        );
+      }
     }
 
-    return await ProgressionRepository.findByUserId(idCible);
+    const rows = await ProgressionRepository.findByUserId(idCible);
+
+    for (const row of rows) {
+      row.pourcentage = await ParcoursService.computePourcentage(
+        row.id_formation,
+        idCible,
+      );
+    }
+
+    return rows;
   }
+
   /**
-   * Récupérer les progressions d'une formation
+   * Progressions des inscrits d'une formation
+   *
+   * - Formateur propriétaire / admin uniquement.
    */
   async getProgressionsByFormation(id_formation, user) {
     const formation = await FormationRepository.findById(id_formation);
-
     if (!formation) {
       throw new NotFoundError("Formation introuvable.");
     }
-
-    const rows = await ProgressionRepository.findByFormationId(id_formation);
-
-    // Un étudiant ne voit que sa propre progression ; un formateur qui
-    // possède la formation voit toutes les progressions de ses étudiants.
-    return scopePersonalRowsByFormation(rows, user, formation);
-  }
-  /**
-   * Créer une progression
-   */
-  async createProgression(data, user) {
-    imposeOwnership(data, user);
-
-    const utilisateur = await UserRepository.findById(data.id_utilisateur);
-
-    if (!utilisateur) {
-      throw new NotFoundError("Utilisateur introuvable.");
-    }
-
-    const formation = await FormationRepository.findById(data.id_formation);
-
-    if (!formation) {
-      throw new NotFoundError("Formation introuvable.");
-    }
-    /**
-     * Vérifier que l'utilisateur
-     * est inscrit à la formation
-     */
-    const enrollment = await EnrollmentRepository.findByUserAndFormation(
-      data.id_utilisateur,
-      data.id_formation,
-    );
-
-    if (!enrollment) {
-      throw new AccessDeniedError("Cet utilisateur n'est pas inscrit à cette formation.");
-    }
-    /**
-     * Vérifier qu'une progression
-     * n'existe pas déjà
-     */
-    const existingProgression =
-      await ProgressionRepository.findByUserAndFormation(
-        data.id_utilisateur,
-        data.id_formation,
-      );
-
-    if (existingProgression) {
-      throw new ConflictError(
-        "Une progression existe déjà pour cet utilisateur dans cette formation.",
-      );
-    }
-    /**
-     * Vérifier le pourcentage
-     */
-    const pourcentage = data.pourcentage ?? 0;
-
-    if (Number(pourcentage) < 0 || Number(pourcentage) > 100) {
-      throw new ValidationError("Le pourcentage doit être compris entre 0 et 100.");
-    }
-
-    try {
-      return await ProgressionRepository.create({
-        ...data,
-        pourcentage,
-      });
-    } catch (error) {
-      handleDatabaseError(error);
-    }
-  }
-  /**
-   * Modifier une progression
-   */
-  async updateProgression(id, data, user) {
-    const progression = await ProgressionRepository.findById(id);
-
-    if (!progression) {
-      throw new NotFoundError("Progression introuvable.");
-    }
-
-    // IDOR : un non-admin ne peut modifier que ses propres progressions
-    assertPersonalAccess(user, progression.id_utilisateur);
-
-    imposeOwnership(data, user);
-
-    // Mise à jour partielle : si l'utilisateur ou la formation ne sont pas
-    // fournis, on conserve les valeurs existantes.
-    if (data.id_utilisateur === undefined) {
-      data.id_utilisateur = progression.id_utilisateur;
-    }
-    if (data.id_formation === undefined) {
-      data.id_formation = progression.id_formation;
-    }
-
-    const utilisateur = await UserRepository.findById(data.id_utilisateur);
-
-    if (!utilisateur) {
-      throw new NotFoundError("Utilisateur introuvable.");
-    }
-
-    const formation = await FormationRepository.findById(data.id_formation);
-
-    if (!formation) {
-      throw new NotFoundError("Formation introuvable.");
-    }
-    /**
-     * Vérifier l'inscription
-     */
-    const enrollment = await EnrollmentRepository.findByUserAndFormation(
-      data.id_utilisateur,
-      data.id_formation,
-    );
-
-    if (!enrollment) {
-      throw new AccessDeniedError("Cet utilisateur n'est pas inscrit à cette formation.");
-    }
-    /**
-     * Vérifier le pourcentage
-     */
-    if (Number(data.pourcentage) < 0 || Number(data.pourcentage) > 100) {
-      throw new ValidationError("Le pourcentage doit être compris entre 0 et 100.");
-    }
-    /**
-     * Vérifier qu'on ne crée pas
-     * un doublon en changeant le couple
-     * utilisateur / formation.
-     */
-    const existingProgression =
-      await ProgressionRepository.findByUserAndFormation(
-        data.id_utilisateur,
-        data.id_formation,
-      );
-
-    if (
-      existingProgression &&
-      existingProgression.id_progression !== Number(id)
-    ) {
-      throw new ConflictError(
-        "Une progression existe déjà pour cet utilisateur dans cette formation.",
-      );
-    }
-
-    try {
-      await ProgressionRepository.update(id, data);
-
-      return await ProgressionRepository.findById(id);
-    } catch (error) {
-      handleDatabaseError(error);
-    }
-  }
-  /**
-   * Recalculer la progression de tous les étudiants d'une formation.
-   *
-   * - Administrateur : toutes les formations.
-   * - Formateur : uniquement ses propres formations.
-   */
-  async recomputeForFormation(id_formation, user) {
-    const formation = await FormationRepository.findById(id_formation);
-
-    if (!formation) {
-      throw new NotFoundError("Formation introuvable.");
-    }
-
-    const { canAccessFormation } = await import("../utils/ownership.js");
 
     if (!canAccessFormation(formation, user)) {
       throw new AccessDeniedError(
-        "Accès interdit. Cette ressource ne vous appartient pas.",
+        "Accès interdit. Cette formation ne vous appartient pas.",
       );
     }
 
-    const enrollments = await EnrollmentRepository.findByFormationId(id_formation);
+    const enrollments =
+      await EnrollmentRepository.findByFormationId(id_formation);
 
-    const updated = [];
-
+    const rows = [];
     for (const enrollment of enrollments) {
-      const pourcentage = await ProgressionLeconService.recomputeForUserAndFormation(
-        enrollment.id_utilisateur,
-        id_formation,
-      );
-
-      updated.push({ id_utilisateur: enrollment.id_utilisateur, pourcentage });
+      rows.push({
+        id_utilisateur: enrollment.id_utilisateur,
+        id_formation: Number(id_formation),
+        pourcentage: await ParcoursService.computePourcentage(
+          id_formation,
+          enrollment.id_utilisateur,
+        ),
+      });
     }
 
-    return updated;
+    return rows;
   }
 
   /**
-   * Supprimer une progression
+   * Vrai si l'étudiant est inscrit à au moins une formation du formateur.
    */
-  async deleteProgression(id, user) {
-    const progression = await ProgressionRepository.findById(id);
+  async _sharesFormation(idFormateur, idEtudiant) {
+    const [rows] = await pool.query(
+      `
+            SELECT COUNT(*) AS total
+            FROM inscriptions i
+            INNER JOIN formations f ON i.id_formation = f.id_formation
+            WHERE i.id_utilisateur = ? AND f.id_formateur = ?
+            `,
+      [idEtudiant, idFormateur],
+    );
+    return Number(rows[0].total) > 0;
+  }
+
+  /**
+   * Recalculer puis persister la progression d'un étudiant dans une
+   * formation. Retourne le pourcentage calculé.
+   */
+  async recomputeForUserAndFormation(id_utilisateur, id_formation) {
+    const pourcentage = await ParcoursService.computePourcentage(
+      id_formation,
+      id_utilisateur,
+    );
+
+    let progression = await ProgressionRepository.findByUserAndFormation(
+      id_utilisateur,
+      id_formation,
+    );
 
     if (!progression) {
-      throw new NotFoundError("Progression introuvable.");
+      await ProgressionRepository.create({
+        id_utilisateur,
+        id_formation,
+        pourcentage,
+      });
+    } else if (Number(progression.pourcentage) !== Number(pourcentage)) {
+      await ProgressionRepository.update(progression.id_progression, {
+        pourcentage,
+      });
     }
 
-    // IDOR : un non-admin ne peut supprimer que ses propres progressions
-    assertPersonalAccess(user, progression.id_utilisateur);
+    return pourcentage;
+  }
 
-    try {
-      return await ProgressionRepository.delete(id);
-    } catch (error) {
-      handleDatabaseError(error);
+  /**
+   * Progressions de l'utilisateur courant dans toutes ses formations
+   */
+  async getMyProgression(user) {
+    const rows = await ProgressionRepository.findByUserId(user.id);
+
+    // recalcul à chaud : la valeur persistée n'est qu'un cache
+    for (const row of rows) {
+      row.pourcentage = await ParcoursService.computePourcentage(
+        row.id_formation,
+        user.id,
+      );
     }
+
+    return rows;
+  }
+
+  /**
+   * Recalculer les progressions de tous les inscrits d'une formation
+   * (admin + formateur propriétaire).
+   */
+  async recomputeForFormation(id_formation, user) {
+    const formation = await FormationRepository.findById(id_formation);
+    if (!formation) {
+      throw new NotFoundError("Formation introuvable.");
+    }
+
+    if (!canAccessFormation(formation, user)) {
+      throw new AccessDeniedError(
+        "Accès interdit. Cette formation ne vous appartient pas.",
+      );
+    }
+
+    const enrollments =
+      await EnrollmentRepository.findByFormationId(id_formation);
+
+    const resultats = [];
+    for (const enrollment of enrollments) {
+      const pourcentage = await this.recomputeForUserAndFormation(
+        enrollment.id_utilisateur,
+        id_formation,
+      );
+      resultats.push({
+        id_utilisateur: enrollment.id_utilisateur,
+        pourcentage,
+      });
+    }
+
+    return resultats;
   }
 }
 

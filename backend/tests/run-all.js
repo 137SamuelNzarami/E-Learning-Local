@@ -20,6 +20,7 @@ const SUITES = [
   "http-routes.test.js",
   "features.test.js",
   "cross-role.test.js",
+  "notifications-e2e.test.js",
 ];
 
 function runSuite(file) {

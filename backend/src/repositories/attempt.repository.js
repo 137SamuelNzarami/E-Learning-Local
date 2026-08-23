@@ -1,11 +1,6 @@
 import pool from "../config/database.js";
 
-class AttemptRepository {
-  /**
-   * Récupérer toutes les tentatives
-   */
-  async findAll() {
-    const [rows] = await pool.query(`
+const SELECT_BASE = `
             SELECT
                 t.id_tentative,
                 t.id_utilisateur,
@@ -14,7 +9,21 @@ class AttemptRepository {
                 u.email,
                 t.id_quiz,
                 q.titre AS quiz,
-                t.note
+                q.score_reussite,
+                t.note,
+                t.statut,
+                t.date_soumission,
+                t.date_correction,
+                t.created_at
+`;
+
+class AttemptRepository {
+  /**
+   * Récupérer toutes les tentatives
+   */
+  async findAll() {
+    const [rows] = await pool.query(`
+            ${SELECT_BASE}
             FROM tentatives t
             INNER JOIN utilisateurs u
                 ON t.id_utilisateur = u.id_utilisateur
@@ -31,15 +40,7 @@ class AttemptRepository {
   async findById(id) {
     const [rows] = await pool.query(
       `
-            SELECT
-                t.id_tentative,
-                t.id_utilisateur,
-                u.nom,
-                u.prenom,
-                u.email,
-                t.id_quiz,
-                q.titre AS quiz,
-                t.note
+            ${SELECT_BASE}
             FROM tentatives t
             INNER JOIN utilisateurs u
                 ON t.id_utilisateur = u.id_utilisateur
@@ -58,13 +59,10 @@ class AttemptRepository {
   async findByUserId(id_utilisateur) {
     const [rows] = await pool.query(
       `
-            SELECT
-                t.id_tentative,
-                t.id_utilisateur,
-                t.id_quiz,
-                q.titre AS quiz,
-                t.note
+            ${SELECT_BASE}
             FROM tentatives t
+            INNER JOIN utilisateurs u
+                ON t.id_utilisateur = u.id_utilisateur
             INNER JOIN quiz q
                 ON t.id_quiz = q.id_quiz
             WHERE t.id_utilisateur = ?
@@ -81,17 +79,12 @@ class AttemptRepository {
   async findByQuizId(id_quiz) {
     const [rows] = await pool.query(
       `
-            SELECT
-                t.id_tentative,
-                t.id_utilisateur,
-                u.nom,
-                u.prenom,
-                u.email,
-                t.id_quiz,
-                t.note
+            ${SELECT_BASE}
             FROM tentatives t
             INNER JOIN utilisateurs u
                 ON t.id_utilisateur = u.id_utilisateur
+            INNER JOIN quiz q
+                ON t.id_quiz = q.id_quiz
             WHERE t.id_quiz = ?
             ORDER BY t.id_tentative DESC
             `,
@@ -101,7 +94,61 @@ class AttemptRepository {
     return rows;
   }
   /**
-   * Créer une tentative
+   * Tentatives d'un utilisateur pour un quiz (règle de repassage)
+   */
+  async findByUserAndQuiz(id_utilisateur, id_quiz) {
+    const [rows] = await pool.query(
+      `
+            ${SELECT_BASE}
+            FROM tentatives t
+            INNER JOIN utilisateurs u
+                ON t.id_utilisateur = u.id_utilisateur
+            INNER JOIN quiz q
+                ON t.id_quiz = q.id_quiz
+            WHERE t.id_utilisateur = ? AND t.id_quiz = ?
+            ORDER BY t.id_tentative ASC
+            `,
+      [id_utilisateur, id_quiz],
+    );
+
+    return rows;
+  }
+  /**
+   * Tentative EN_COURS existante d'un utilisateur sur un quiz
+   */
+  async findOpenByUserAndQuiz(id_utilisateur, id_quiz) {
+    const [rows] = await pool.query(
+      `
+            ${SELECT_BASE}
+            FROM tentatives t
+            INNER JOIN utilisateurs u
+                ON t.id_utilisateur = u.id_utilisateur
+            INNER JOIN quiz q
+                ON t.id_quiz = q.id_quiz
+            WHERE t.id_utilisateur = ? AND t.id_quiz = ? AND t.statut = 'EN_COURS'
+            ORDER BY t.id_tentative DESC
+            LIMIT 1
+            `,
+      [id_utilisateur, id_quiz],
+    );
+
+    return rows[0] || null;
+  }
+  /**
+   * Le quiz est-il réussi par cet utilisateur (au moins une tentative) ?
+   */
+  async hasSucceeded(id_utilisateur, id_quiz) {
+    const [rows] = await pool.query(
+      `SELECT 1 AS ok
+       FROM tentatives
+       WHERE id_utilisateur = ? AND id_quiz = ? AND statut = 'REUSSIE'
+       LIMIT 1`,
+      [id_utilisateur, id_quiz],
+    );
+    return rows.length > 0;
+  }
+  /**
+   * Créer une tentative (EN_COURS)
    */
   async create(data) {
     const [result] = await pool.query(
@@ -110,46 +157,43 @@ class AttemptRepository {
             (
                 id_utilisateur,
                 id_quiz,
-                note
+                statut
             )
             VALUES (?, ?, ?)
             `,
-      [data.id_utilisateur, data.id_quiz, data.note ?? null],
+      [data.id_utilisateur, data.id_quiz, data.statut ?? "EN_COURS"],
     );
 
     return result.insertId;
   }
   /**
-   * Modifier une tentative
+   * Enregistrer la soumission : note + statut + date_soumission
    */
-  async update(id, data) {
+  async submit(id, { note, statut }) {
     const [result] = await pool.query(
       `
             UPDATE tentatives
-            SET
-                id_utilisateur = ?,
-                id_quiz = ?,
-                note = ?
+            SET note = ?, statut = ?, date_soumission = NOW()
             WHERE id_tentative = ?
             `,
-      [data.id_utilisateur, data.id_quiz, data.note, id],
+      [note, statut, id],
     );
 
     return result.affectedRows;
   }
   /**
-   * Modifier la note d'une tentative
+   * Correction du formateur : note finale + statut + date_correction
    */
-  async updateNote(id, note) {
+  async correct(id, { note, statut }) {
     const [result] = await pool.query(
       `
             UPDATE tentatives
-            SET
-                note = ?
+            SET note = ?, statut = ?, date_correction = NOW()
             WHERE id_tentative = ?
             `,
-      [note, id],
+      [note, statut, id],
     );
+
     return result.affectedRows;
   }
   /**
@@ -163,6 +207,7 @@ class AttemptRepository {
             `,
       [id],
     );
+
     return result.affectedRows;
   }
 }

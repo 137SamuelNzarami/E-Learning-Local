@@ -15,7 +15,9 @@ import ROLES from "../constants/role.js";
 
 const router = Router();
 
-router.get("/", authMiddleware, QuizController.index);
+router.get("/", authMiddleware, roleMiddleware(ROLES.ADMIN, ROLES.FORMATEUR), QuizController.index);
+
+router.get("/chapter/:id_chapitre", authMiddleware, QuizController.byChapter);
 
 router.get("/:id", authMiddleware, QuizController.show);
 

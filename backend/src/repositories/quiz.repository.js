@@ -8,33 +8,22 @@ class QuizRepository {
     const [rows] = await pool.query(`
             SELECT
                 q.id_quiz,
+                q.id_chapitre,
                 q.titre,
+                q.score_reussite,
 
-                l.id_lecon,
-                l.titre AS lecon,
-
-                c.id_chapitre,
+                c.id_formation,
                 c.titre AS chapitre,
 
-                m.id_module,
-                m.titre AS module,
-
-                f.id_formation,
                 f.titre AS formation
 
             FROM quiz q
 
-            INNER JOIN lecons l
-                ON q.id_lecon = l.id_lecon
-
             INNER JOIN chapitres c
-                ON l.id_chapitre = c.id_chapitre
-
-            INNER JOIN modules m
-                ON c.id_module = m.id_module
+                ON q.id_chapitre = c.id_chapitre
 
             INNER JOIN formations f
-                ON m.id_formation = f.id_formation
+                ON c.id_formation = f.id_formation
 
             ORDER BY q.titre ASC
         `);
@@ -49,33 +38,23 @@ class QuizRepository {
       `
             SELECT
                 q.id_quiz,
-                q.id_lecon,
+                q.id_chapitre,
                 q.titre,
+                q.score_reussite,
 
-                l.titre AS lecon,
-
-                c.id_chapitre,
+                c.id_formation,
+                c.ordre AS chapitre_ordre,
                 c.titre AS chapitre,
 
-                m.id_module,
-                m.titre AS module,
-
-                f.id_formation,
                 f.titre AS formation
 
             FROM quiz q
 
-            INNER JOIN lecons l
-                ON q.id_lecon = l.id_lecon
-
             INNER JOIN chapitres c
-                ON l.id_chapitre = c.id_chapitre
-
-            INNER JOIN modules m
-                ON c.id_module = m.id_module
+                ON q.id_chapitre = c.id_chapitre
 
             INNER JOIN formations f
-                ON m.id_formation = f.id_formation
+                ON c.id_formation = f.id_formation
 
             WHERE q.id_quiz = ?
             `,
@@ -85,47 +64,24 @@ class QuizRepository {
     return rows[0] || null;
   }
   /**
-   * Rechercher un quiz par son titre
+   * Quiz d'un chapitre (règle métier : un quiz par chapitre)
    */
-  async findByTitle(titre) {
+  async findByChapter(id_chapitre) {
     const [rows] = await pool.query(
       `
             SELECT
                 q.id_quiz,
-                q.id_lecon,
+                q.id_chapitre,
                 q.titre,
-
-                l.titre AS lecon,
-
-                c.id_chapitre,
-                c.titre AS chapitre,
-
-                m.id_module,
-                m.titre AS module,
-
-                f.id_formation,
-                f.titre AS formation
-
+                q.score_reussite
             FROM quiz q
-
-            INNER JOIN lecons l
-                ON q.id_lecon = l.id_lecon
-
-            INNER JOIN chapitres c
-                ON l.id_chapitre = c.id_chapitre
-
-            INNER JOIN modules m
-                ON c.id_module = m.id_module
-
-            INNER JOIN formations f
-                ON m.id_formation = f.id_formation
-
-            WHERE q.titre = ?
+            WHERE q.id_chapitre = ?
+            ORDER BY q.id_quiz ASC
             `,
-      [titre],
+      [id_chapitre],
     );
 
-    return rows[0] || null;
+    return rows;
   }
   /**
    * Créer un quiz
@@ -135,12 +91,13 @@ class QuizRepository {
       `
             INSERT INTO quiz
             (
-                id_lecon,
-                titre
+                id_chapitre,
+                titre,
+                score_reussite
             )
-            VALUES (?, ?)
+            VALUES (?, ?, ?)
             `,
-      [data.id_lecon, data.titre],
+      [data.id_chapitre, data.titre, data.score_reussite ?? 50],
     );
 
     return result.insertId;
@@ -149,15 +106,27 @@ class QuizRepository {
    * Modifier un quiz
    */
   async update(id, data) {
+    const fields = [];
+    const params = [];
+
+    if (data.titre !== undefined) {
+      fields.push("titre = ?");
+      params.push(data.titre);
+    }
+    if (data.score_reussite !== undefined) {
+      fields.push("score_reussite = ?");
+      params.push(data.score_reussite);
+    }
+
+    if (fields.length === 0) {
+      return 0;
+    }
+
+    params.push(id);
+
     const [result] = await pool.query(
-      `
-            UPDATE quiz
-            SET
-                id_lecon = ?,
-                titre = ?
-            WHERE id_quiz = ?
-            `,
-      [data.id_lecon, data.titre, id],
+      `UPDATE quiz SET ${fields.join(", ")} WHERE id_quiz = ?`,
+      params,
     );
 
     return result.affectedRows;

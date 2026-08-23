@@ -17,13 +17,35 @@ class ChapterController {
       return ApiResponse.fromError(res, error);
     }
   }
+
   /**
-   * Récupérer un chapitre
+   * Chapitres d'une formation
+   * (étudiant : vue PARCOURS avec état accessible/verrouillé)
+   */
+  async byFormation(req, res) {
+    try {
+      const { id_formation } = req.params;
+      const data = await ChapterService.getChaptersByFormation(
+        id_formation,
+        req.user,
+      );
+      return ApiResponse.success(
+        res,
+        "Chapitres récupérés avec succès.",
+        data,
+      );
+    } catch (error) {
+      return ApiResponse.fromError(res, error);
+    }
+  }
+
+  /**
+   * Récupérer un chapitre (blocage backend pour un étudiant)
    */
   async show(req, res) {
     try {
       const { id } = req.params;
-      const chapter = await ChapterService.getChapterById(id);
+      const chapter = await ChapterService.getChapterById(id, req.user);
       return ApiResponse.success(
         res,
         "Chapitre récupéré avec succès.",
@@ -33,6 +55,7 @@ class ChapterController {
       return ApiResponse.fromError(res, error);
     }
   }
+
   /**
    * Créer un chapitre
    */
@@ -44,6 +67,7 @@ class ChapterController {
       return ApiResponse.fromError(res, error);
     }
   }
+
   /**
    * Modifier un chapitre
    */
@@ -56,6 +80,41 @@ class ChapterController {
       return ApiResponse.fromError(res, error);
     }
   }
+
+  /**
+   * Réordonner les chapitres d'une formation
+   */
+  async reorder(req, res) {
+    try {
+      const { id_formation } = req.params;
+      const chapitres = await ChapterService.reorderChapters(
+        id_formation,
+        req.body.chapitres ?? [],
+        req.user,
+      );
+      return ApiResponse.success(
+        res,
+        "Chapitres réordonnés avec succès.",
+        chapitres,
+      );
+    } catch (error) {
+      return ApiResponse.fromError(res, error);
+    }
+  }
+
+  /**
+   * Marquer un chapitre sans quiz comme terminé (étudiant inscrit)
+   */
+  async complete(req, res) {
+    try {
+      const { id } = req.params;
+      const result = await ChapterService.completeChapter(id, req.user);
+      return ApiResponse.success(res, "Chapitre terminé.", result);
+    } catch (error) {
+      return ApiResponse.fromError(res, error);
+    }
+  }
+
   /**
    * Supprimer un chapitre
    */

@@ -8,89 +8,34 @@ import authMiddleware from "../middlewares/auth.middleware.js";
 
 import roleMiddleware from "../middlewares/role.middleware.js";
 
-import validate from "../middlewares/validate.js";
-
-import {
-  createStudentAnswerValidator,
-  updateStudentAnswerValidator,
-} from "../validators/student-answer.validator.js";
-
 const router = Router();
 
 /**
- * Toutes les réponses des étudiants (données personnelles : admin / formateur)
+ * Toutes les réponses d'étudiants (admin)
  */
 router.get(
   "/",
   authMiddleware,
-  roleMiddleware(ROLES.ADMIN, ROLES.FORMATEUR),
+  roleMiddleware(ROLES.ADMIN),
   StudentAnswerController.index,
 );
 
 /**
  * Réponses d'une tentative
+ *
+ * - Étudiant : uniquement ses propres réponses.
+ * - Formateur : réponses des tentatives de SES quiz.
  */
 router.get(
   "/attempt/:id_tentative",
   authMiddleware,
+  roleMiddleware(ROLES.ETUDIANT, ROLES.FORMATEUR, ROLES.ADMIN),
   StudentAnswerController.getByAttempt,
 );
 
 /**
- * Réponses d'une question
- */
-router.get(
-  "/question/:id_question",
-  authMiddleware,
-  StudentAnswerController.getByQuestion,
-);
-
-/**
- * Réponses d'un utilisateur
- */
-router.get(
-  "/user/:id_utilisateur",
-  authMiddleware,
-  StudentAnswerController.getByUser,
-);
-
-/**
- * Une réponse étudiant
+ * Une réponse étudiant (avec note / correction si autorisé)
  */
 router.get("/:id", authMiddleware, StudentAnswerController.show);
-
-/**
- * Enregistrer une réponse étudiant
- */
-router.post(
-  "/",
-  authMiddleware,
-  roleMiddleware(ROLES.ADMIN, ROLES.FORMATEUR, ROLES.ETUDIANT),
-  createStudentAnswerValidator,
-  validate,
-  StudentAnswerController.store,
-);
-
-/**
- * Modifier une réponse étudiant
- */
-router.put(
-  "/:id",
-  authMiddleware,
-  roleMiddleware(ROLES.ADMIN, ROLES.FORMATEUR, ROLES.ETUDIANT),
-  updateStudentAnswerValidator,
-  validate,
-  StudentAnswerController.update,
-);
-
-/**
- * Supprimer une réponse étudiant
- */
-router.delete(
-  "/:id",
-  authMiddleware,
-  roleMiddleware(ROLES.ADMIN, ROLES.FORMATEUR, ROLES.ETUDIANT),
-  StudentAnswerController.destroy,
-);
 
 export default router;

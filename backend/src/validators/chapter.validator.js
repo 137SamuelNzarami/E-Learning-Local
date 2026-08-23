@@ -1,11 +1,11 @@
 import { body } from "express-validator";
 
 export const createChapterValidator = [
-  body("id_module")
+  body("id_formation")
     .notEmpty()
-    .withMessage("Le module est obligatoire.")
+    .withMessage("La formation est obligatoire.")
     .isInt({ min: 1 })
-    .withMessage("Le module est invalide."),
+    .withMessage("La formation est invalide."),
 
   body("titre")
     .trim()
@@ -19,6 +19,30 @@ export const createChapterValidator = [
     .trim()
     .isLength({ max: 2000 })
     .withMessage("La description ne peut pas dépasser 2000 caractères."),
+
+  body("ordre")
+    .optional()
+    .isInt({ min: 0 })
+    .withMessage("L'ordre doit être un entier positif."),
 ];
 
-export const updateChapterValidator = createChapterValidator;
+export const updateChapterValidator = [
+  body("titre")
+    .optional()
+    .trim()
+    .notEmpty()
+    .withMessage("Le titre est obligatoire.")
+    .isLength({ min: 3, max: 150 })
+    .withMessage("Le titre doit contenir entre 3 et 150 caractères."),
+
+  body("description")
+    .optional({ values: "falsy" })
+    .trim()
+    .isLength({ max: 2000 })
+    .withMessage("La description ne peut pas dépasser 2000 caractères."),
+
+  body("ordre")
+    .optional()
+    .isInt({ min: 0 })
+    .withMessage("L'ordre doit être un entier positif."),
+];

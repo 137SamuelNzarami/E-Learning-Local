@@ -1,5 +1,9 @@
 import { body } from "express-validator";
 
+/**
+ * Une réponse appartient toujours à une question QCM.
+ * `est_correcte` : une seule par question (garanti côté service).
+ */
 export const createAnswerValidator = [
   body("id_question")
     .notEmpty()
@@ -7,17 +11,30 @@ export const createAnswerValidator = [
     .isInt({ min: 1 })
     .withMessage("L'identifiant de la question est invalide."),
 
-  body("contenu")
+  body("texte")
     .trim()
     .notEmpty()
-    .withMessage("Le contenu de la réponse est obligatoire.")
-    .isLength({ min: 1 })
-    .withMessage("Le contenu de la réponse ne peut pas être vide."),
+    .withMessage("Le texte de la réponse est obligatoire.")
+    .isLength({ min: 1, max: 1000 })
+    .withMessage("Le texte de la réponse ne peut pas dépasser 1000 caractères."),
 
   body("est_correcte")
     .optional()
     .isBoolean()
-    .withMessage("Le champ est_correcte doit être un booléen."),
+    .withMessage("est_correcte doit être un booléen."),
 ];
 
-export const updateAnswerValidator = createAnswerValidator;
+export const updateAnswerValidator = [
+  body("texte")
+    .optional()
+    .trim()
+    .notEmpty()
+    .withMessage("Le texte de la réponse est obligatoire.")
+    .isLength({ max: 1000 })
+    .withMessage("Le texte de la réponse ne peut pas dépasser 1000 caractères."),
+
+  body("est_correcte")
+    .optional()
+    .isBoolean()
+    .withMessage("est_correcte doit être un booléen."),
+];

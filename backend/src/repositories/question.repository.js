@@ -1,5 +1,7 @@
 import pool from "../config/database.js";
 
+const FIELDS = "q.id_question, q.id_quiz, q.enonce, q.type, q.points";
+
 class QuestionRepository {
   /**
    * Récupérer toutes les questions
@@ -7,9 +9,7 @@ class QuestionRepository {
   async findAll() {
     const [rows] = await pool.query(`
             SELECT
-                q.id_question,
-                q.id_quiz,
-                q.enonce,
+                ${FIELDS},
                 z.titre AS quiz
             FROM questions q
             INNER JOIN quiz z
@@ -25,9 +25,7 @@ class QuestionRepository {
     const [rows] = await pool.query(
       `
             SELECT
-                q.id_question,
-                q.id_quiz,
-                q.enonce,
+                ${FIELDS},
                 z.titre AS quiz
             FROM questions q
             INNER JOIN quiz z
@@ -39,15 +37,13 @@ class QuestionRepository {
     return rows[0] || null;
   }
   /**
-   * Récupérer les questions d'un quiz
+   * Récupérer les questions d'un quiz (avec type + points)
    */
   async findByQuizId(id_quiz) {
     const [rows] = await pool.query(
       `
             SELECT
-                q.id_question,
-                q.id_quiz,
-                q.enonce
+                ${FIELDS}
             FROM questions q
             WHERE q.id_quiz = ?
             ORDER BY q.id_question ASC
@@ -57,7 +53,7 @@ class QuestionRepository {
     return rows;
   }
   /**
-   * Créer une question
+   * Créer une question (QCM ou LIBRE)
    */
   async create(data) {
     const [result] = await pool.query(
@@ -65,27 +61,50 @@ class QuestionRepository {
             INSERT INTO questions
             (
                 id_quiz,
-                enonce
+                enonce,
+                type,
+                points
             )
-            VALUES (?, ?)
+            VALUES (?, ?, ?, ?)
             `,
-      [data.id_quiz, data.enonce],
+      [
+        data.id_quiz,
+        data.enonce,
+        data.type ?? "QCM",
+        data.points ?? 1,
+      ],
     );
     return result.insertId;
   }
   /**
-   * Modifier une question
+   * Modifier une question (partiel)
    */
   async update(id, data) {
+    const sets = [];
+    const values = [];
+
+    if (data.enonce !== undefined) {
+      sets.push("enonce = ?");
+      values.push(data.enonce);
+    }
+    if (data.type !== undefined) {
+      sets.push("type = ?");
+      values.push(data.type);
+    }
+    if (data.points !== undefined) {
+      sets.push("points = ?");
+      values.push(data.points);
+    }
+
+    if (sets.length === 0) {
+      return 0;
+    }
+
+    values.push(id);
+
     const [result] = await pool.query(
-      `
-            UPDATE questions
-            SET
-                id_quiz = ?,
-                enonce = ?
-            WHERE id_question = ?
-            `,
-      [data.id_quiz, data.enonce, id],
+      "UPDATE questions SET " + sets.join(", ") + " WHERE id_question = ?",
+      values,
     );
     return result.affectedRows;
   }

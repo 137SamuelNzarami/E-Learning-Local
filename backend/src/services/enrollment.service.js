@@ -116,6 +116,18 @@ class EnrollmentService {
       throw new NotFoundError("Formation introuvable.");
     }
 
+    // Un étudiant (ou formateur non propriétaire) ne peut s'inscrire
+    // qu'à une formation PUBLIÉE.
+    if (
+      !isAdmin(user) &&
+      !canAccessFormation(formation, user) &&
+      formation.statut !== "PUBLIEE"
+    ) {
+      throw new AccessDeniedError(
+        "Inscription impossible : cette formation n'est pas publiée.",
+      );
+    }
+
     const existingEnrollment =
       await EnrollmentRepository.findByUserAndFormation(
         data.id_utilisateur,

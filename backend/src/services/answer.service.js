@@ -1,110 +1,133 @@
 import AnswerRepository from "../repositories/answer.repository.js";
 import QuestionRepository from "../repositories/question.repository.js";
+import QuizRepository from "../repositories/quiz.repository.js";
+import ParcoursService from "./parcours.service.js";
 import { handleDatabaseError } from "../utils/database-errors.js";
-import { assertCanManage } from "../utils/ownership.js";
-import { canAccessFormation } from "../utils/ownership.js";
-import { resolveFormation } from "../utils/ownership.js";
-import { NotFoundError } from "../utils/app-errors.js";
+import {
+  assertCanManage,
+  canSeeCorrection,
+  resolveFormation,
+  stripCorrectionField,
+} from "../utils/ownership.js";
+import { ConflictError, NotFoundError } from "../utils/app-errors.js";
 
 class AnswerService {
-  /**
-   * Récupérer toutes les réponses
-   * (accessible aux administrateurs et formateurs uniquement)
-   */
   async getAllAnswers() {
     return await AnswerRepository.findAll();
   }
 
   /**
-   * Masquer le champ est_correcte si l'utilisateur n'a pas le droit
-   * de connaître la correction (uniquement le formateur propriétaire
-   * de la formation et l'administrateur).
-   *
-   * @param {Object|Array<Object>} rows - réponse(s) contenant est_correcte
-   * @param {Object} user - utilisateur authentifié
-   * @param {number|string} idQuestion - question racine
+   * Masque le corrigé (est_correcte) pour tout utilisateur qui n'a pas
+   * les droits de correction. Un étudiant — même inscrit — ne doit
+   * JAMAIS pouvoir obtenir les bonnes réponses via l'API.
    */
   async exposeCorrection(rows, user, idQuestion) {
     const formation = await resolveFormation("question", idQuestion);
 
-    if (canAccessFormation(formation, user)) {
+    if (canSeeCorrection(user, formation)) {
       return rows;
     }
 
-    const strip = (row) => {
-      const { est_correcte, ...rest } = row;
-      return rest;
-    };
-
-    return Array.isArray(rows) ? rows.map(strip) : strip(rows);
+    return rows.map((row) => stripCorrectionField(row));
   }
 
-  /**
-   * Récupérer une réponse par son ID
-   */
   async getAnswerById(id, user) {
     const answer = await AnswerRepository.findById(id);
+
     if (!answer) {
       throw new NotFoundError("Réponse introuvable.");
     }
-    return await this.exposeCorrection(answer, user, answer.id_question);
-  }
-  /**
-   * Récupérer les réponses d'une question
-   */
-  async getAnswersByQuestion(id_question, user) {
-    const question = await QuestionRepository.findById(id_question);
+
+    // accès au quiz parent requis
+    const question = await QuestionRepository.findById(answer.id_question);
     if (!question) {
       throw new NotFoundError("Question introuvable.");
     }
+    const quiz = await QuizRepository.findById(question.id_quiz);
+    await ParcoursService.assertChapterAccessible(quiz.id_chapitre, user);
+
+    const formation = await resolveFormation("question", answer.id_question);
+
+    return canSeeCorrection(user, formation)
+      ? answer
+      : stripCorrectionField(answer);
+  }
+
+  async getAnswersByQuestion(id_question, user) {
+    const question = await QuestionRepository.findById(id_question);
+
+    if (!question) {
+      throw new NotFoundError("Question introuvable.");
+    }
+
+    const quiz = await QuizRepository.findById(question.id_quiz);
+    await ParcoursService.assertChapterAccessible(quiz.id_chapitre, user);
+
     const rows = await AnswerRepository.findByQuestionId(id_question);
+
     return await this.exposeCorrection(rows, user, id_question);
   }
+
   /**
-   * Créer une réponse
+   * Créer un choix de réponse (questions QCM uniquement)
    */
   async createAnswer(data, user) {
     const question = await QuestionRepository.findById(data.id_question);
+
     if (!question) {
       throw new NotFoundError("La question sélectionnée est introuvable.");
     }
-    // Le formateur ne peut créer que dans ses propres questions
+
+    if (question.type !== "QCM") {
+      throw new ConflictError(
+        "Une question à réponse libre ne possède pas de choix prédéfinis.",
+      );
+    }
+
     await assertCanManage("question", data.id_question, user);
-    return await AnswerRepository.create(data);
+
+    // L'API expose `texte` ; la colonne DB est `contenu`.
+    return await AnswerRepository.create({
+      id_question: data.id_question,
+      contenu: (data.texte ?? "").trim(),
+      est_correcte: !!data.est_correcte,
+    });
   }
-  /**
-   * Modifier une réponse
-   */
+
   async updateAnswer(id, data, user) {
     const answer = await AnswerRepository.findById(id);
+
     if (!answer) {
       throw new NotFoundError("Réponse introuvable.");
     }
-    // Seul le propriétaire (ou un administrateur) peut modifier la réponse
+
     await assertCanManage("answer", id, user);
-    const question = await QuestionRepository.findById(data.id_question);
-    if (!question) {
-      throw new NotFoundError("La question sélectionnée est introuvable.");
+
+    const payload = {};
+    if (data.texte !== undefined) {
+      payload.contenu = String(data.texte).trim();
     }
-    // Si la réponse est déplacée, le formateur doit posséder la question cible
-    await assertCanManage("question", data.id_question, user);
+    if (data.est_correcte !== undefined) {
+      payload.est_correcte = !!data.est_correcte;
+    }
+
     try {
-      await AnswerRepository.update(id, data);
+      await AnswerRepository.update(id, payload);
       return await AnswerRepository.findById(id);
     } catch (error) {
       handleDatabaseError(error);
     }
   }
-  /**
-   * Supprimer une réponse
-   */
+
   async deleteAnswer(id, user) {
     const answer = await AnswerRepository.findById(id);
+
     if (!answer) {
       throw new NotFoundError("Réponse introuvable.");
     }
-    // Seul le propriétaire (ou un administrateur) peut supprimer
+
     await assertCanManage("answer", id, user);
+
     try {
       return await AnswerRepository.delete(id);
     } catch (error) {

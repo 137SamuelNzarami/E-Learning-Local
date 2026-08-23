@@ -8,8 +8,12 @@ class FormationRepository {
         const [rows] = await pool.query(`
             SELECT
                 f.id_formation,
+                f.id_categorie,
+                f.id_formateur,
                 f.titre,
                 f.description,
+                f.statut,
+                f.created_at,
                 c.nom_categorie,
                 u.nom,
                 u.prenom
@@ -34,6 +38,8 @@ class FormationRepository {
                 f.id_formateur,
                 f.titre,
                 f.description,
+                f.statut,
+                f.created_at,
                 c.nom_categorie,
                 u.nom,
                 u.prenom
@@ -73,18 +79,30 @@ class FormationRepository {
                 id_categorie,
                 id_formateur,
                 titre,
-                description
+                description,
+                statut
             )
-            VALUES (?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?)
             `,
             [
                 data.id_categorie,
                 data.id_formateur,
                 data.titre,
-                data.description
+                data.description,
+                data.statut ?? "BROUILLON"
             ]
         );
         return result.insertId;
+    }
+    /**
+     * Publier / dépublier une formation
+     */
+    async updateStatut(id, statut) {
+        const [result] = await pool.query(
+            "UPDATE formations SET statut = ? WHERE id_formation = ?",
+            [statut, id]
+        );
+        return result.affectedRows;
     }
     /**
      * Mise à jour

@@ -59,6 +59,30 @@ router.put(
 );
 
 /**
+ * Publier une formation
+ *
+ * Administrateur + Formateur (propriétaire).
+ */
+router.patch(
+  "/:id/publish",
+  authMiddleware,
+  roleMiddleware(ROLES.ADMIN, ROLES.FORMATEUR),
+  FormationController.publish,
+);
+
+/**
+ * Dépublier une formation (retour en brouillon)
+ *
+ * Administrateur + Formateur (propriétaire).
+ */
+router.patch(
+  "/:id/unpublish",
+  authMiddleware,
+  roleMiddleware(ROLES.ADMIN, ROLES.FORMATEUR),
+  FormationController.unpublish,
+);
+
+/**
  * Supprimer une formation
  *
  * Administrateur + Formateur (propriétaire).
