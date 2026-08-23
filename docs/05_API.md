@@ -1,569 +1,948 @@
-# 05 - API REST
-
-# E-Learning Universitaire Locale
+# API CONTRACT — TUTORE / E-LEARNING UNIVERSITAIRE LOCAL
 
 Version : 1.0
+Statut : Contrat de référence pour le frontend
+Backend : Node.js + Express
+Base de données : MySQL
+Base de données utilisée : elearningDb
 
 ---
 
-# 1. Objectif
+## 1. OBJECTIF
 
-Ce document définit les règles de conception et de développement de l'API REST utilisée par la plateforme **E-Learning Universitaire Locale**.
+Ce document définit le contrat API utilisé par le frontend React.
 
-L'API constitue l'unique point de communication entre :
+Le frontend ne doit pas inventer de routes.
 
-- le Front-End React ;
-- le Back-End Express ;
-- la base de données MySQL.
+Toute communication avec le backend doit passer par les endpoints réellement exposés par l'application Express.
 
-Aucun composant React ne doit accéder directement à la base de données.
+Le frontend doit respecter :
 
----
+- les méthodes HTTP ;
+- les paramètres ;
+- les corps de requêtes ;
+- les réponses ;
+- les codes HTTP ;
+- l'authentification JWT ;
+- les rôles ;
+- les permissions ;
+- les règles métier ;
+- les restrictions d'accès aux formations et aux chapitres.
 
-# 2. Architecture
+Les règles de sécurité sont appliquées côté backend.
 
-```
-React
-
-↓
-
-Axios
-
-↓
-
-API REST Express
-
-↓
-
-Services
-
-↓
-
-Models
-
-↓
-
-MySQL
-```
-
-Toutes les communications transitent par l'API.
+Le frontend ne doit jamais être considéré comme une couche de sécurité.
 
 ---
 
-# 3. Technologies
+# 2. BASE URL
 
-L'API est développée avec :
+En développement local :
 
-- Node.js
-- Express.js
-- JWT
-- bcrypt
-- Multer
-- Express Validator
-- MySQL
+http://localhost:3010
 
----
+Base API :
 
-# 4. Format des échanges
+http://localhost:3010/api
 
-Toutes les requêtes utilisent :
+Exemple :
 
-```
-JSON
-```
-
-Toutes les réponses retournent du JSON.
+GET http://localhost:3010/api/formations
 
 ---
 
-# 5. URL de base
+# 3. AUTHENTIFICATION
 
-En développement :
+L'API utilise une authentification par JWT.
 
-```
-http://localhost:5000/api
-```
+Après authentification, le token doit être envoyé dans l'en-tête HTTP :
 
-Toutes les routes commencent par :
+Authorization: Bearer <JWT>
 
-```
-/api
-```
+Exemple :
 
----
+Authorization: Bearer eyJhbGciOi...
 
-# 6. Authentification
-
-L'API utilise :
-
-JWT (JSON Web Token)
-
-Le token est envoyé dans :
-
-```
-Authorization
-
-Bearer TOKEN
-```
-
-Toutes les routes privées nécessitent un token valide.
+Les routes publiques et protégées doivent être distinguées selon leur configuration réelle dans le backend.
 
 ---
 
-# 7. Structure des réponses
+# 4. RÔLES
 
-Réussite
+La plateforme possède trois rôles principaux.
 
-```json
+## 4.1 ADMINISTRATEUR
+
+L'administrateur possède les droits d'administration et de supervision prévus par le backend.
+
+Le frontend administrateur doit uniquement afficher les opérations réellement autorisées par l'API.
+
+---
+
+## 4.2 FORMATEUR
+
+Le formateur peut gérer les contenus dont il est propriétaire selon les permissions du backend.
+
+Notamment :
+
+- formations ;
+- chapitres ;
+- sections ;
+- sous-sections ;
+- contenu Rich Text ;
+- quiz ;
+- questions ;
+- réponses ;
+- correction des réponses libres ;
+- suivi de ses étudiants ;
+- conversations ;
+- notifications.
+
+Un formateur ne doit pas pouvoir modifier les ressources appartenant à un autre formateur.
+
+---
+
+## 4.3 ÉTUDIANT
+
+L'étudiant peut notamment :
+
+- consulter le catalogue ;
+- consulter les formations accessibles ;
+- s'inscrire ;
+- consulter son parcours ;
+- consulter les chapitres accessibles ;
+- consulter les sections et sous-sections accessibles ;
+- consulter le contenu Rich Text ;
+- passer les quiz ;
+- consulter ses tentatives ;
+- consulter sa progression ;
+- consulter ses notifications ;
+- participer aux conversations autorisées.
+
+L'étudiant ne doit jamais pouvoir contourner les restrictions de progression côté frontend.
+
+---
+
+# 5. FORMAT GÉNÉRAL DES REQUÊTES
+
+Pour les requêtes JSON :
+
+Content-Type: application/json
+
+Exemple :
+
+POST /api/formations
+
+Headers :
+
+Authorization: Bearer <JWT>
+Content-Type: application/json
+
+Body :
+
 {
-    "success": true,
-    "message": "Opération effectuée avec succès.",
-    "data": {}
+  ...
 }
-```
 
-Erreur
+Pour les fichiers éventuels, le frontend doit utiliser le format réellement accepté par le backend.
 
-```json
-{
-    "success": false,
-    "message": "Une erreur est survenue."
-}
-```
-
-Validation
-
-```json
-{
-    "success": false,
-    "errors":[]
-}
-```
+Le nouveau modèle pédagogique privilégie le contenu Rich Text pour le contenu des sous-sections.
 
 ---
 
-# 8. Codes HTTP
+# 6. FORMAT GÉNÉRAL DES ERREURS
 
-| Code | Description |
-|-------|-------------|
-|200|Succès|
-|201|Créé|
-|204|Aucun contenu|
-|400|Requête invalide|
-|401|Non authentifié|
-|403|Accès interdit|
-|404|Introuvable|
-|409|Conflit|
-|422|Erreur de validation|
-|500|Erreur serveur|
+Le frontend doit traiter les codes HTTP retournés par le backend.
 
----
+Principaux cas :
 
-# 9. Authentification
+- 200 : succès ;
+- 201 : ressource créée ;
+- 400 : requête invalide ;
+- 401 : authentification absente ou invalide ;
+- 403 : accès interdit ;
+- 404 : ressource inexistante ;
+- 409 : conflit ou règle métier empêchant l'opération ;
+- 422 : données non valides lorsque cette réponse est utilisée par le backend ;
+- 500 : erreur serveur.
 
-## POST
+Le frontend ne doit pas transformer une erreur 403 en succès visuel.
 
-```
-/auth/login
-```
-
-Connexion.
+Les messages d'erreur doivent être affichés de manière compréhensible à l'utilisateur.
 
 ---
 
-## POST
+# 7. AUTH
 
-```
-/auth/register
-```
+## Connexion
 
-Création du compte étudiant.
-
----
-
-## POST
-
-```
-/auth/logout
-```
-
-Déconnexion.
-
----
-
-## GET
-
-```
-/auth/profile
-```
-
-Informations utilisateur.
-
----
-
-# 10. API Utilisateurs
-
-```
-GET /users
-
-GET /users/:id
-
-POST /users
-
-PUT /users/:id
-
-DELETE /users/:id
-```
-
----
-
-# 11. API Catégories
-
-```
-GET
+Méthode :
 
 POST
 
-PUT
+Route :
 
-DELETE
-```
+/api/auth/...
 
----
+Le frontend doit utiliser la route exacte exposée par le backend.
 
-# 12. API Formations
-
-```
-GET /formations
-
-GET /formations/:id
-
-POST /formations
-
-PUT /formations/:id
-
-DELETE /formations/:id
-```
+La réponse d'authentification doit permettre au frontend de récupérer les informations nécessaires à la session, notamment le JWT et les informations de rôle lorsqu'elles sont fournies.
 
 ---
 
-# 13. API Modules
+# 8. CATÉGORIES
 
-```
+Les catégories permettent d'organiser les formations.
+
+Opérations prévues :
+
 GET
+POST
+PUT
+DELETE
+
+Les routes exactes doivent correspondre aux routes exposées par le backend.
+
+Les opérations d'écriture sont soumises aux permissions du rôle authentifié.
+
+Le frontend administrateur doit utiliser les routes d'administration prévues.
+
+---
+
+# 9. FORMATIONS
+
+## Consultation du catalogue
+
+Méthode :
+
+GET
+
+Route :
+
+/api/formations
+
+Cette route permet au frontend de récupérer les formations selon les règles de visibilité définies par le backend.
+
+Le frontend ne doit pas supposer qu'une formation est accessible uniquement parce qu'elle est retournée dans une liste.
+
+---
+
+## Création
+
+Méthode :
 
 POST
 
+Route :
+
+/api/formations
+
+Authentification :
+
+JWT
+
+Rôle :
+
+Formateur autorisé ou administrateur selon les règles backend.
+
+---
+
+## Consultation d'une formation
+
+Méthode :
+
+GET
+
+Route :
+
+/api/formations/:id
+
+---
+
+## Modification
+
+Méthode :
+
 PUT
 
+Route :
+
+/api/formations/:id
+
+Le backend doit vérifier que l'utilisateur possède le droit de modifier la formation.
+
+---
+
+## Suppression
+
+Méthode :
+
 DELETE
-```
+
+Route :
+
+/api/formations/:id
+
+La suppression doit respecter les relations de la base de données.
 
 ---
 
-# 14. API Chapitres
+## Publication
 
-CRUD complet.
+Une formation peut être soumise aux règles de publication définies par le backend.
 
----
+Une formation non publiée ne doit pas pouvoir être utilisée comme une formation publique par un étudiant.
 
-# 15. API Leçons
-
-CRUD complet.
+L'inscription à une formation non publiée doit être refusée par le backend.
 
 ---
 
-# 16. API Vidéos
+# 10. ARCHITECTURE PÉDAGOGIQUE
 
-Fonctionnalités :
+La structure pédagogique actuelle est :
 
-- upload
-- lecture
-- suppression
+FORMATION
+↓
+CHAPITRES
+↓
+SECTIONS
+↓
+SOUS-SECTIONS
+↓
+CONTENU RICH TEXT
+↓
+QUIZ DE CHAPITRE
 
-Les fichiers sont enregistrés dans :
+Le frontend doit respecter cette structure.
 
-```
-uploads/videos/
-```
+Les anciennes notions de :
 
----
+- modules ;
+- leçons ;
+- devoirs ;
+- vidéos séparées ;
+- documents pédagogiques séparés
 
-# 17. API Documents
-
-Fonctionnalités :
-
-- upload
-- téléchargement
-- suppression
-
----
-
-# 18. API Inscriptions
-
-Permet :
-
-- inscrire un étudiant ;
-- consulter les inscriptions ;
-- supprimer une inscription.
+ne doivent pas être recréées dans le frontend si elles ne sont plus présentes dans le contrat backend actuel.
 
 ---
 
-# 19. API Progressions
+# 11. CHAPITRES
 
-Lecture uniquement.
+## Liste des chapitres d'une formation
 
-La progression est calculée automatiquement.
+Méthode :
+
+GET
+
+Route :
+
+/api/chapters/formation/:id
+
+Cette route est particulièrement importante pour le parcours étudiant.
+
+Pour un étudiant, la réponse peut contenir les informations de parcours telles que :
+
+- formation ;
+- chapitres ;
+- état de validation ;
+- accessibilité ;
+- progression.
+
+Le frontend doit utiliser les informations retournées par le backend.
+
+Il ne doit pas recalculer arbitrairement l'accessibilité d'un chapitre.
 
 ---
 
-# 20. API Quiz
+## Réordonnancement
 
-Fonctionnalités :
+Méthode :
+
+PATCH
+
+Route :
+
+/chapters/formation/:id/reorder
+
+Cette opération est réservée aux utilisateurs autorisés.
+
+---
+
+# 12. SECTIONS
+
+Les sections appartiennent aux chapitres.
+
+Le frontend formateur doit permettre les opérations réellement exposées par le backend :
+
+- création ;
+- consultation ;
+- modification ;
+- suppression ;
+- réordonnancement lorsqu'il existe une route correspondante.
+
+Les droits d'accès doivent être vérifiés côté backend.
+
+---
+
+# 13. SOUS-SECTIONS
+
+Les sous-sections appartiennent aux sections.
+
+Elles constituent l'unité contenant le contenu pédagogique Rich Text.
+
+Le frontend formateur doit pouvoir gérer :
 
 - création ;
 - modification ;
 - suppression ;
-- consultation.
+- ordre ;
+- contenu Rich Text.
+
+Le contenu est stocké dans le backend sous la forme prévue par le schéma actuel.
+
+Le contenu Rich Text doit être envoyé au backend selon le format accepté par les validateurs.
 
 ---
 
-# 21. API Questions
+# 14. RICH TEXT
 
-CRUD complet.
+Le contenu pédagogique utilise le Rich Text.
 
----
+Le principe est :
 
-# 22. API Réponses
+Formation
+→ Chapitre
+→ Section
+→ Sous-section
+→ Contenu Rich Text
 
-CRUD complet.
+Le frontend ne doit plus construire une architecture pédagogique basée principalement sur :
 
----
+- fichiers vidéo séparés ;
+- documents pédagogiques séparés ;
+- leçons indépendantes ;
+- devoirs indépendants.
 
-# 23. API Tentatives
+Les contenus intégrés dans le Rich Text doivent respecter les règles de sécurité et de taille du backend.
 
-Création d'une tentative.
+Le backend peut limiter la taille du contenu HTML.
 
-Consultation des résultats.
+Le frontend doit donc prévoir :
 
----
-
-# 24. API Réponses Étudiants
-
-Enregistrement des réponses.
-
-Correction automatique.
-
----
-
-# 25. API Devoirs
-
-Création.
-
-Modification.
-
-Suppression.
-
-Consultation.
+- éditeur Rich Text ;
+- aperçu ;
+- édition ;
+- sauvegarde ;
+- affichage sécurisé.
 
 ---
 
-# 26. API Soumissions
+# 15. QUIZ
 
-Téléversement.
+Les quiz sont associés aux chapitres.
 
-Notation.
+Route de consultation :
 
-Consultation.
+GET /api/quizzes
 
----
+GET /api/quizzes/:id
 
-# 27. API Avis
+GET /api/quizzes/chapter/:id
 
-Création.
+Création :
 
-Modification.
+POST /api/quizzes
 
-Suppression.
+Modification :
 
-Lecture.
+PUT /api/quizzes/:id
 
----
+Suppression :
 
-# 28. API Conversations
+DELETE /api/quizzes/:id
 
-Création.
+Le backend applique les règles métier.
 
-Liste.
+Un chapitre ne doit pas recevoir plusieurs quiz si le backend impose la règle d'un seul quiz par chapitre.
 
-Suppression.
-
----
-
-# 29. API Messages
-
-Envoi.
-
-Lecture.
-
-Suppression.
+Dans ce cas, une tentative de création supplémentaire doit être traitée comme un conflit HTTP 409.
 
 ---
 
-# 30. API Notifications
+# 16. QUESTIONS
 
-Création.
+Les questions appartiennent aux quiz.
 
-Lecture.
+Le système distingue notamment :
 
-Marquer comme lue.
+- questions à choix multiple ;
+- questions libres.
 
-Suppression.
+Le type d'une question peut être figé après certaines étapes de création/modification selon les règles backend.
 
----
-
-# 31. Pagination
-
-Les listes volumineuses utilisent :
-
-```
-?page=1
-
-&limit=20
-```
+Le frontend doit respecter les validations du backend.
 
 ---
 
-# 32. Recherche
+# 17. RÉPONSES
 
-Utiliser :
+Les réponses sont associées aux questions.
 
-```
-?q=javascript
-```
+Pour une question QCM, les réponses permettent de déterminer la bonne réponse.
+
+IMPORTANT :
+
+Le champ indiquant qu'une réponse est correcte ne doit jamais être exposé à l'étudiant avant la correction.
+
+Le frontend étudiant doit recevoir uniquement les données nécessaires pour répondre au quiz.
 
 ---
 
-# 33. Tri
+# 18. TENTATIVES
+
+Une tentative représente le passage d'un quiz par un étudiant.
+
+Cycle métier :
+
+EN_COURS
+↓
+SOUMISE / A_CORRIGER
+↓
+REUSSIE ou ECHOUEE
+
+Pour les QCM :
+
+→ correction automatique par le serveur.
+
+Pour les questions libres :
+
+→ correction par le formateur propriétaire.
+
+La note est calculée et contrôlée côté serveur.
+
+Le frontend ne doit jamais calculer ou imposer lui-même la note finale.
+
+---
+
+# 19. CORRECTION DES TENTATIVES
+
+Route :
+
+PATCH /attempts/:id/corriger
+
+Cette opération est réservée au propriétaire de la formation selon les règles backend.
+
+Un étudiant ne peut pas corriger sa propre tentative.
+
+Le backend contrôle :
+
+- l'identité ;
+- la propriété de la formation ;
+- les limites de la note ;
+- l'état de la tentative.
+
+---
+
+# 20. REPONSES ÉTUDIANTS
+
+Les réponses des étudiants sont associées aux tentatives et aux questions.
+
+Le frontend étudiant doit pouvoir :
+
+- saisir une réponse ;
+- sauvegarder/envoyer selon le workflow ;
+- consulter le résultat autorisé.
+
+Le frontend formateur doit pouvoir consulter les réponses qu'il est autorisé à corriger.
+
+Les réponses d'un étudiant ne doivent pas être accessibles à un autre étudiant.
+
+---
+
+# 21. RÉUSSITE DU QUIZ
+
+La validation d'un quiz est une règle backend.
+
+Pour un QCM :
+
+→ le serveur corrige automatiquement.
+
+Pour une question libre :
+
+→ le formateur corrige et confirme la note.
+
+Une tentative réussie permet de valider le chapitre selon la logique de progression actuelle.
+
+---
+
+# 22. REPASSAGE DU QUIZ
+
+Un étudiant peut repasser un quiz lorsqu'il a échoué, selon les règles backend.
+
+Un quiz déjà réussi ne doit pas pouvoir être repassé si le backend interdit une nouvelle tentative après REUSSIE.
+
+Le frontend doit afficher le comportement réel retourné par l'API et non inventer sa propre règle.
+
+---
+
+# 23. VERROUILLAGE DES CHAPITRES
+
+Le parcours est séquentiel.
 
 Exemple :
 
-```
-?sort=titre
+Chapitre 1
+↓
+Quiz
+↓
+Réussite
+↓
+Chapitre 2
 
-?order=asc
-```
+Le chapitre suivant reste inaccessible tant que le quiz précédent n'est pas réussi.
+
+Le serveur est la source de vérité.
+
+Si le serveur retourne 403 pour un chapitre verrouillé, le frontend doit :
+
+- empêcher l'accès ;
+- afficher clairement que le chapitre est verrouillé ;
+- indiquer la condition nécessaire pour continuer.
+
+Il ne faut jamais se contenter de masquer le bouton.
 
 ---
 
-# 34. Filtrage
+# 24. PROGRESSION
+
+La progression est calculée côté serveur.
+
+Le frontend doit consommer la progression fournie par l'API.
+
+Le pourcentage ne doit pas être calculé arbitrairement uniquement dans React.
+
+La progression doit rester cohérente entre :
+
+- détail de formation ;
+- parcours ;
+- état des chapitres.
+
+---
+
+# 25. INSCRIPTIONS
+
+Une inscription associe un étudiant à une formation.
+
+Elle doit respecter :
+
+- l'authentification ;
+- les permissions ;
+- la publication de la formation ;
+- l'absence de doublon.
+
+Une formation non publiée ne doit pas être accessible à l'inscription publique.
+
+Une inscription réussie peut déclencher :
+
+- progression initiale ;
+- conversation automatique ;
+- notification au formateur.
+
+Le frontend doit refléter les résultats retournés par l'API.
+
+---
+
+# 26. CONVERSATIONS
+
+Les conversations permettent la communication entre utilisateurs autorisés.
+
+Lorsqu'un étudiant s'inscrit à une formation, le backend peut créer automatiquement une conversation entre :
+
+FORMATEUR
+↔
+ÉTUDIANT
+
+La conversation doit être associée au contexte de formation.
+
+Le frontend doit afficher les conversations autorisées sans exposer les identifiants techniques inutilement.
+
+---
+
+# 27. PARTICIPANTS
+
+Les participants déterminent les utilisateurs autorisés à accéder à une conversation.
+
+Le backend doit vérifier l'appartenance à la conversation avant l'envoi ou la consultation des messages.
+
+Le frontend ne doit pas considérer un simple ID comme une preuve d'accès.
+
+---
+
+# 28. MESSAGES
+
+Les messages appartiennent aux conversations.
+
+Le frontend doit permettre :
+
+- consultation ;
+- envoi ;
+- affichage de l'expéditeur ;
+- affichage de la date ;
+- actualisation.
+
+L'envoi d'un message peut déclencher une notification pour les autres participants.
+
+---
+
+# 29. NOTIFICATIONS
+
+Les notifications sont liées à des événements métier.
+
+Les événements actuellement couverts par le backend comprennent notamment :
+
+- inscription ;
+- nouveau message ;
+- tentative à corriger ;
+- correction/validation de quiz ;
+- nouvel avis.
+
+Le frontend doit afficher :
+
+- liste des notifications ;
+- titre ;
+- message ;
+- date ;
+- état lu/non lu ;
+- compteur de notifications non lues.
+
+---
+
+# 30. NOTIFICATIONS NON BLOQUANTES
+
+Une notification ne doit pas empêcher l'action métier principale lorsqu'une erreur de notification survient si le backend applique cette règle.
 
 Exemple :
 
-```
-?categorie=Programmation
+INSCRIPTION
+→ inscription réussie
+→ notification éventuelle
 
-?niveau=Débutant
-```
-
----
-
-# 35. Upload
-
-Les fichiers sont envoyés avec :
-
-```
-multipart/form-data
-```
-
-Utiliser Multer.
+Une erreur de notification ne doit pas transformer automatiquement une inscription réussie en échec métier.
 
 ---
 
-# 36. Validation
+# 31. AVIS
 
-Toutes les données sont validées avant traitement.
+Les avis permettent aux étudiants autorisés de donner une appréciation sur une formation.
 
-Utiliser :
+Le backend doit contrôler :
 
-Express Validator.
+- l'identité de l'auteur ;
+- l'inscription ;
+- les doublons ;
+- l'accès à la formation.
 
----
-
-# 37. Sécurité
-
-Toutes les routes privées sont protégées.
-
-Les rôles sont vérifiés.
-
-Les mots de passe sont chiffrés.
-
-Les injections SQL sont interdites.
+Le frontend ne doit jamais permettre à un utilisateur de choisir arbitrairement l'identité de l'auteur.
 
 ---
 
-# 38. Gestion des erreurs
+# 32. ACCÈS AUX FICHIERS
 
-Toutes les erreurs sont centralisées.
+Lorsque des fichiers sont référencés dans du contenu Rich Text, leur accès doit passer par les mécanismes de sécurité du backend.
 
-Aucune erreur SQL ne doit être renvoyée au Front-End.
+Les permissions doivent notamment tenir compte :
 
----
+- de l'administrateur ;
+- du formateur propriétaire ;
+- de l'étudiant inscrit ;
+- de l'état de publication de la formation.
 
-# 39. Versionnement
-
-Version actuelle :
-
-```
-v1
-```
-
-Les futures versions utiliseront :
-
-```
-/api/v2
-```
+Le frontend ne doit pas exposer directement un chemin physique du serveur comme mécanisme de sécurité.
 
 ---
 
-# 40. Documentation
+# 33. SÉCURITÉ IDOR
 
-Chaque contrôleur doit être documenté.
+Le backend protège les ressources contre les accès directs par modification d'identifiant.
 
-Chaque route doit être commentée.
+Exemple :
 
-Les paramètres doivent être expliqués.
+Un étudiant ne doit pas pouvoir modifier :
 
----
+GET /api/attempts/123
 
-# 41. Instructions pour Codex
+en :
 
-Avant de développer l'API :
+GET /api/attempts/124
 
-1. Lire entièrement ce document.
+pour obtenir les données d'un autre étudiant.
 
-2. Lire la documentation de la base de données.
-
-3. Générer une route par ressource.
-
-4. Générer un contrôleur par table.
-
-5. Générer un modèle par table.
-
-6. Respecter l'architecture MVC.
-
-7. Respecter les conventions REST.
-
-8. Utiliser les middlewares appropriés.
-
-9. Ne jamais modifier la base de données.
-
-10. Tester chaque endpoint avant de passer au suivant.
+Le frontend doit respecter les erreurs 403/404 retournées par le serveur.
 
 ---
 
-# 42. Conclusion
+# 34. MATRICE GÉNÉRALE DES ACCÈS
 
-L'API REST constitue le cœur de la communication entre le Front-End React et le Back-End Express.
+| Fonction | Admin | Formateur propriétaire | Formateur étranger | Étudiant inscrit | Étudiant non inscrit |
+|---|---|---|---|---|---|
+| Administrer utilisateurs | Oui | Non | Non | Non | Non |
+| Gérer ses formations | Oui selon backend | Oui | Non | Non | Non |
+| Modifier formation étrangère | Selon permission | Non | Non | Non | Non |
+| Gérer chapitres | Oui selon permission | Oui | Non | Non | Non |
+| Gérer sections | Oui selon permission | Oui | Non | Non | Non |
+| Gérer sous-sections | Oui selon permission | Oui | Non | Non | Non |
+| Gérer quiz propriétaire | Oui selon permission | Oui | Non | Non | Non |
+| Passer quiz | Non | Non | Non | Oui | Non |
+| Corriger questions libres | Oui selon permission | Oui propriétaire | Non | Non | Non |
+| Consulter sa progression | Oui selon supervision | Selon permission | Selon permission | Oui | Non |
+| S'inscrire | Selon rôle | Selon rôle | Selon rôle | Oui | Oui si formation publiée |
+| Messagerie autorisée | Oui selon permission | Oui | Selon permission | Oui participant | Non |
+| Notifications personnelles | Oui | Oui | Oui | Oui | Non |
+| Avis | Selon règles | Selon règles | Selon règles | Oui si inscrit | Non |
 
-Toute implémentation devra respecter les conventions définies dans ce document afin de garantir une application cohérente, évolutive et maintenable.
+Cette matrice doit toujours être considérée comme indicative lorsque le backend applique une permission plus précise.
+
+---
+
+# 35. RÈGLES POUR LE FRONTEND REACT
+
+Le frontend doit :
+
+1. utiliser les endpoints réellement exposés ;
+2. utiliser les services API centralisés ;
+3. envoyer le JWT ;
+4. gérer les erreurs HTTP ;
+5. respecter les rôles ;
+6. respecter les réponses backend ;
+7. ne pas contourner les 401/403 ;
+8. ne pas recalculer les règles métier critiques ;
+9. ne pas exposer les réponses correctes des QCM ;
+10. ne pas modifier arbitrairement les notes ;
+11. ne pas déverrouiller localement un chapitre ;
+12. conserver une séparation claire entre UI et appels API.
+
+---
+
+# 36. STRUCTURE CONSEILLÉE DES SERVICES FRONTEND
+
+Le frontend peut organiser ses appels API par domaine :
+
+authService
+categoryService
+formationService
+chapterService
+sectionService
+subSectionService
+quizService
+questionService
+answerService
+attemptService
+studentAnswerService
+progressionService
+enrollmentService
+conversationService
+participantService
+messageService
+notificationService
+reviewService
+userService
+
+Les noms doivent correspondre aux services réellement présents dans le projet.
+
+---
+
+# 37. RÈGLE DE SYNCHRONISATION BACKEND / FRONTEND
+
+Avant toute modification frontend :
+
+1. vérifier la route backend ;
+2. vérifier la méthode HTTP ;
+3. vérifier le middleware d'authentification ;
+4. vérifier le rôle ;
+5. vérifier le body ;
+6. vérifier la réponse ;
+7. vérifier les erreurs ;
+8. vérifier la persistance ;
+9. ensuite seulement construire l'interface React.
+
+Le frontend ne doit jamais devenir une deuxième implémentation du métier.
+
+---
+
+# 38. TESTS API
+
+Les tests doivent être effectués avec :
+
+- Postman ;
+- tests automatisés backend ;
+- navigateur lorsque nécessaire.
+
+Les scénarios importants sont :
+
+- authentification ;
+- création de formation ;
+- publication ;
+- inscription ;
+- création de chapitre ;
+- création de section ;
+- création de sous-section ;
+- création de quiz ;
+- création de questions ;
+- tentative QCM ;
+- correction automatique ;
+- tentative question libre ;
+- correction formateur ;
+- verrouillage chapitre ;
+- progression ;
+- conversation ;
+- message ;
+- notification ;
+- avis ;
+- permissions.
+
+---
+
+# 39. DOCUMENTATION DE RÉFÉRENCE
+
+Ce fichier constitue le contrat général.
+
+Pour les détails exacts des endpoints, payloads et données de test, utiliser :
+
+docs/API_DOCUMENTATION.md
+
+et :
+
+docs/API_TEST_DATA.md
+
+Ces documents doivent rester cohérents avec le backend réel.
+
+En cas de divergence :
+
+CODE BACKEND RÉEL
+→ source de vérité.
+
+La documentation doit ensuite être corrigée pour correspondre au code.
+
+---
+
+# 40. RÈGLE FINALE
+
+Aucune route fictive ne doit être ajoutée au frontend.
+
+Aucune permission ne doit être supposée.
+
+Aucune règle métier critique ne doit être implémentée uniquement côté React.
+
+Le backend Express reste la source de vérité pour :
+
+- authentification ;
+- autorisation ;
+- progression ;
+- validation des quiz ;
+- notes ;
+- accès aux chapitres ;
+- inscriptions ;
+- conversations ;
+- notifications ;
+- accès aux ressources.

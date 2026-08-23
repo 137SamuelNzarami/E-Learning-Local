@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { param } from "express-validator";
 
+
 import AttemptController from "../controllers/attempt.controller.js";
 
 import ROLES from "../constants/role.js";
@@ -35,6 +36,21 @@ router.get(
  * - Formateur : celles de ses étudiants.
  */
 router.get("/user/:id_utilisateur", authMiddleware, AttemptController.byUser);
+
+/**
+ * Tentatives d'un quiz
+ *
+ * - Étudiant : uniquement les siennes.
+ * - Formateur : celles des étudiants de SES formations.
+ * - Administrateur : toutes.
+ */
+router.get(
+  "/quiz/:id_quiz/attempts",
+  authMiddleware,
+  param("id_quiz").isInt({ min: 1 }).withMessage("id_quiz invalide."),
+  validate,
+  AttemptController.byQuiz,
+);
 
 /**
  * Démarrer une tentative sur un quiz

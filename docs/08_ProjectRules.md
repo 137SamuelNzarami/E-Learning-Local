@@ -1,263 +1,63 @@
-# 08 - Project Rules
+# Règles absolues du projet
 
-Projet : E-Learning Universitaire Locale
+1. La base réelle est elearningDb.
 
-Version : 1.0
+2. Ne jamais utiliser elearning_db.
 
----
+3. Ne jamais désactiver les Foreign Keys.
 
-# 1. Objectif
+4. Ne jamais contourner une autorisation backend.
 
-Ce document définit les règles générales du projet.
+5. Ne jamais faire confiance au frontend pour la sécurité.
 
-Toutes les personnes ou intelligences artificielles (Codex, ChatGPT, GitHub Copilot, Cursor AI, etc.) qui participent au développement doivent respecter ces règles.
+6. Ne jamais permettre à un étudiant de modifier une formation.
 
-Ces règles sont prioritaires sur toute décision d'implémentation.
+7. Un formateur ne gère que ses propres formations.
 
----
+8. Un étudiant ne peut accéder qu'aux formations auxquelles
+   il a les droits nécessaires.
 
-# 2. Ordre de lecture obligatoire
+9. La progression est calculée côté backend.
 
-Avant toute modification du projet, l'agent doit lire les documents suivants dans cet ordre :
+10. Le frontend ne peut pas déclarer arbitrairement une formation
+    terminée.
 
-1. README.md
+11. Un quiz appartient à un chapitre.
 
-2. docs/01_ProjectVision.md
+12. Le chapitre suivant est verrouillé jusqu'à réussite
+    du quiz précédent.
 
-3. docs/02_DataBaseRules.md
+13. Les QCM peuvent être corrigés automatiquement.
 
-4. docs/03_Architecture.md
+14. Les questions libres nécessitent une correction du formateur.
 
-5. docs/04_UI_UX.md
+15. Un étudiant peut repasser un quiz échoué selon les règles métier.
 
-6. docs/05_API.md
+16. Les bonnes réponses ne doivent jamais être exposées
+    à l'étudiant avant la correction.
 
-7. docs/06_CodingStandards.md
+17. Une conversation étudiant/formateur peut être créée
+    automatiquement lors de l'inscription.
 
-8. docs/07_Roadmap.md
+18. Les conversations doivent respecter les participants.
 
-9. docs/08_ProjectRules.md
+19. Les notifications ne doivent pas casser l'action métier.
 
-10. docs/09_PromptTemplates.md
+20. Ne pas réintroduire le certificat.
 
-Aucune implémentation ne doit commencer avant la lecture complète de ces documents.
+21. Ne pas réintroduire les devoirs comme mécanisme pédagogique
+    principal si le backend actuel les a supprimés du produit.
 
----
+22. Ne pas réintroduire arbitrairement les anciennes entités
+    module/lesson/video/document si elles ont été supprimées
+    de l'architecture actuelle.
 
-# 3. Base de données
+23. Ne jamais modifier la DB sans analyser son impact.
 
-La base officielle du projet est :
+24. Après chaque correction :
+    test backend
+    → test API
+    → test navigateur
+    → non-régression.
 
-elearning_db
-
-Elle est déjà créée.
-
-Elle est déjà exécutée dans PHPMyAdmin.
-
-Elle constitue la seule source de vérité.
-
-Le code doit s'adapter à cette base.
-
-La base ne doit jamais être adaptée au code.
-
----
-
-# 4. Interdictions
-
-Il est strictement interdit de :
-
-- modifier une table existante ;
-- supprimer une table ;
-- renommer une table ;
-- modifier une clé primaire ;
-- modifier une clé étrangère ;
-- modifier les relations SQL ;
-- supprimer une colonne ;
-- renommer une colonne ;
-- changer le type d'une colonne ;
-- recréer la base de données.
-
-Toute amélioration doit être proposée séparément.
-
----
-
-# 5. Architecture
-
-Respecter obligatoirement :
-
-- MVC
-- API REST
-- React + Express
-- MySQL
-- Context API (ou Redux si validé)
-- Tailwind CSS
-
----
-
-# 6. Front-End
-
-Le Front-End doit être :
-
-- moderne ;
-- responsive ;
-- accessible ;
-- réutilisable ;
-- performant.
-
-Ne jamais copier l'interface de Moodle, Coursera, Udemy ou OpenClassrooms.
-
----
-
-# 7. Skills
-
-Avant de développer une interface :
-
-analyser le dossier
-
-.agents/skills/
-
-Identifier les Skills liés :
-
-- au design ;
-- à React ;
-- à l'expérience utilisateur ;
-- à l'architecture.
-
-Appliquer leurs recommandations lorsqu'elles sont compatibles avec le projet.
-
----
-
-# 8. Code
-
-Toujours produire :
-
-- du code lisible ;
-- documenté ;
-- modulaire ;
-- réutilisable ;
-- testé.
-
----
-
-# 9. API
-
-Chaque table possède :
-
-- un modèle ;
-- un service ;
-- un contrôleur ;
-- un routeur.
-
-Respecter les conventions REST.
-
----
-
-# 10. Authentification
-
-Utiliser :
-
-- JWT
-- bcrypt
-
-Toutes les routes sensibles doivent être protégées.
-
----
-
-# 11. Uploads
-
-Les fichiers doivent être stockés dans :
-
-uploads/videos/
-
-uploads/documents/
-
-uploads/devoirs/
-
-Ne jamais enregistrer les fichiers dans MySQL.
-
----
-
-# 12. Git
-
-Les commits doivent être petits.
-
-Une seule fonctionnalité par commit.
-
----
-
-# 13. Développement
-
-Le développement suit obligatoirement la Roadmap.
-
-Ne jamais développer plusieurs fonctionnalités majeures en parallèle.
-
----
-
-# 14. Tests
-
-Chaque fonctionnalité doit être :
-
-- développée ;
-- testée ;
-- validée ;
-
-avant de passer à la suivante.
-
----
-
-# 15. Communication avec l'utilisateur
-
-Avant toute implémentation importante, expliquer brièvement :
-
-- ce qui sera développé ;
-- les fichiers concernés ;
-- les impacts éventuels.
-
----
-
-# 16. Suggestions
-
-Les suggestions d'amélioration sont autorisées.
-
-Mais elles ne doivent jamais être appliquées automatiquement.
-
-Toujours attendre la validation du propriétaire du projet.
-
----
-
-# 17. Documentation
-
-Tout nouveau module doit être documenté.
-
-Le README doit être mis à jour si nécessaire.
-
----
-
-# 18. Qualité
-
-Le projet doit rester :
-
-- cohérent ;
-- évolutif ;
-- professionnel ;
-- maintenable.
-
----
-
-# 19. Fin de tâche
-
-À la fin de chaque tâche, vérifier :
-
-✓ Le code compile.
-
-✓ Les tests passent.
-
-✓ Aucune régression.
-
-✓ Les règles du projet sont respectées.
-
----
-
-# 20. Conclusion
-
-En cas de conflit entre une décision de développement et ce document, ce document prévaut.
+25. Ne jamais déclarer PASS sans test réel.

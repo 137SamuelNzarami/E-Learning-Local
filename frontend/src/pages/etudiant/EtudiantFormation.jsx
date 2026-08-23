@@ -4,265 +4,203 @@ import { useAuth } from "../../context/AuthContext";
 import PageHeader from "../../components/ui/PageHeader";
 import Card from "../../components/ui/Card";
 import Spinner from "../../components/ui/Spinner";
-import { ProgressBar } from "../../components/ui/ProgressBar";
 import Alert from "../../components/ui/Alert";
-import FieldError, { FormAlert } from "../../components/ui/FieldError";
-import { formationService } from "../../services/formationService";
-import { moduleService } from "../../services/moduleService";
-import { chapterService } from "../../services/chapterService";
-import { lessonService } from "../../services/lessonService";
-import { videoService } from "../../services/videoService";
-import { documentService } from "../../services/documentService";
-import { quizService } from "../../services/quizService";
-import { assignmentService } from "../../services/assignmentService";
-import { progressionServiceExtended } from "../../services/progressionService";
-import { reviewServiceExtended } from "../../services/reviewService";
+import Badge from "../../components/ui/Badge";
+import { ProgressBar } from "../../components/ui/ProgressBar";
+import { formationServiceExtended } from "../../services/formationService";
+import { chapterServiceExtended } from "../../services/chapterService";
+import { enrollmentServiceExtended } from "../../services/enrollmentService";
+import { getErrorMessage } from "../../utils/format";
 import { Icons } from "../../components/Icons";
 
+/**
+ * Fiche formation côté étudiant :
+ * - infos + inscription (POST /enrollments) si nécessaire
+ * - parcours des chapitres (états calculés par le BACKEND :
+ *   accessible / verrouillé / validé + présence de quiz)
+ */
 export default function EtudiantFormation() {
   const { id } = useParams();
   const { user } = useAuth();
 
   const [formation, setFormation] = useState(null);
-  const [modules, setModules] = useState([]);
-  const [chapters, setChapters] = useState([]);
-  const [lessons, setLessons] = useState([]);
-  const [videos, setVideos] = useState([]);
-  const [documents, setDocuments] = useState([]);
-  const [quizzes, setQuizzes] = useState([]);
-  const [assignments, setAssignments] = useState([]);
-  const [progression, setProgression] = useState(null);
-  const [reviews, setReviews] = useState([]);
-  const [myReview, setMyReview] = useState(null);
+  const [parcours, setParcours] = useState(null);
+  const [inscrit, setInscrit] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const [reviewForm, setReviewForm] = useState({ note: 5, commentaire: "" });
-  const [reviewBusy, setReviewBusy] = useState(false);
-  const [reviewError, setReviewError] = useState(null);
-  const [notice, setNotice] = useState(null);
+  const [enrollBusy, setEnrollBusy] = useState(false);
+  const [enrollError, setEnrollError] = useState(null);
+  const [inscritMsg, setInscritMsg] = useState(null);
 
   useEffect(() => {
+    let cancelled = false;
     (async () => {
       setLoading(true);
+      setError(null);
       try {
-        const [f, m, c, l, v, d, q, a, p, r, mine] = await Promise.all([
-          formationService.show(id),
-          moduleService.index(),
-          chapterService.index(),
-          lessonService.index(),
-          videoService.index(),
-          documentService.index(),
-          quizService.index(),
-          assignmentService.index(),
-          progressionServiceExtended.getByUser(user.id),
-          reviewServiceExtended.getByFormation(id),
-          reviewServiceExtended.getByUser(user.id),
+        const fRes = await formationServiceExtended.show(id);
+        if (!cancelled) setFormation(fRes.data);
+
+        const [eRes, pRes] = await Promise.all([
+          enrollmentServiceExtended.getByUser(user.id).catch(() => ({ data: [] })),
+          chapterServiceExtended.byFormation(id).catch(() => null),
         ]);
-        setFormation(f.data);
-        setModules((m.data || []).filter((x) => Number(x.id_formation) === Number(id)));
-        setChapters(c.data || []);
-        setLessons(l.data || []);
-        setVideos(v.data || []);
-        setDocuments(d.data || []);
-        setQuizzes(q.data || []);
-        setAssignments(a.data || []);
-        setProgression((p.data || []).find((x) => Number(x.id_formation) === Number(id)) || null);
-        setReviews(r.data || []);
-        setMyReview((mine.data || []).find((x) => Number(x.id_formation) === Number(id)) || null);
+        if (cancelled) return;
+
+        const mine = (eRes.data || []).some(
+          (e) => Number(e.id_formation) === Number(id),
+        );
+        setInscrit(mine);
+        setParcours(pRes ? pRes.data : null);
       } catch (err) {
-        setError(err);
+        if (!cancelled) setError(err);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     })();
+    return () => {
+      cancelled = true;
+    };
   }, [id, user.id]);
 
-  const moduleChapters = (idModule) => chapters.filter((c) => Number(c.id_module) === Number(idModule));
-  const chapterLessons = (idChapter) => lessons.filter((l) => Number(l.id_chapitre) === Number(idChapter));
-  const lessonVideos = (idLesson) => videos.filter((v) => Number(v.id_lecon) === Number(idLesson));
-  const lessonDocs = (idLesson) => documents.filter((d) => Number(d.id_lecon) === Number(idLesson));
-  const lessonQuiz = (idLesson) => quizzes.find((q) => Number(q.id_lecon) === Number(idLesson));
-  const lessonAssignment = (idLesson) => assignments.find((a) => Number(a.id_lecon) === Number(idLesson));
-
-  const submitReview = async (e) => {
-    e.preventDefault();
-    setReviewBusy(true);
-    setReviewError(null);
+  const enroll = async () => {
+    setEnrollBusy(true);
+    setEnrollError(null);
     try {
-      await reviewServiceExtended.store({
-        id_utilisateur: user.id,
-        id_formation: Number(id),
-        note: Number(reviewForm.note),
-        commentaire: reviewForm.commentaire,
-      });
-      setNotice("Avis enregistré. Merci !");
-      setReviewForm({ note: 5, commentaire: "" });
-      const [r, mine] = await Promise.all([
-        reviewServiceExtended.getByFormation(id),
-        reviewServiceExtended.getByUser(user.id),
-      ]);
-      setReviews(r.data || []);
-      setMyReview((mine.data || []).find((x) => Number(x.id_formation) === Number(id)) || null);
+      await enrollmentServiceExtended.store({ id_formation: Number(id) });
+      setInscrit(true);
+      setInscritMsg("Inscription confirmée — bon apprentissage !");
     } catch (err) {
-      setReviewError(err);
+      setEnrollError(err);
     } finally {
-      setReviewBusy(false);
+      setEnrollBusy(false);
     }
   };
 
   if (loading) return <Spinner />;
-  if (error) return <Alert type="error" title={error.message} />;
+  if (error) return <Alert type="error" title={getErrorMessage(error)} />;
 
-  const average = reviews.length
-    ? (reviews.reduce((acc, r) => acc + Number(r.note), 0) / reviews.length).toFixed(1)
-    : null;
-  const pct = progression ? Number(progression.pourcentage) : 0;
+  const chapitres = parcours?.chapitres || [];
+  const pct = Math.round(Number(parcours?.progression_pourcentage ?? 0));
+  const premierAccessible = chapitres.find((c) => c.accessible && !c.valide);
 
   return (
-    <div>
-      <Link to="/etudiant/parcours" className="text-sm font-medium text-brand-600 hover:underline">
-        ← Mon parcours
+    <div className="mx-auto max-w-4xl">
+      <Link to="/etudiant/catalogue" className="text-sm font-medium text-brand-600 hover:underline">
+        ← Retour au catalogue
       </Link>
-      <PageHeader title={formation?.titre} subtitle={formation?.description} />
 
-      {notice && <Alert type="success" className="mb-4" title={notice} />}
+      <PageHeader title={formation?.titre} subtitle={formation?.description || undefined} />
 
-      <Card className="mb-4 p-5">
-        <div className="mb-1 flex items-center justify-between text-sm">
-          <span className="font-medium text-slate-500">Votre progression</span>
-          <span className="font-semibold text-brand-600">{pct}%</span>
+      <Card className="mb-6 p-5">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="min-w-0 flex-1">
+            {inscrit ? (
+              <>
+                <div className="mb-1 flex items-center justify-between text-sm">
+                  <span className="font-medium text-slate-500">Votre progression</span>
+                  <span className="font-semibold text-brand-700">{pct}%</span>
+                </div>
+                <ProgressBar value={pct} />
+              </>
+            ) : (
+              <>
+                <p className="text-sm font-semibold text-slate-800">Vous n'êtes pas encore inscrit</p>
+                <p className="mt-0.5 text-sm text-slate-500">
+                  Inscrivez-vous pour accéder au contenu et suivre votre progression.
+                </p>
+              </>
+            )}
+          </div>
+          {!inscrit && (
+            <button type="button" className="btn-primary shrink-0" onClick={enroll} disabled={enrollBusy}>
+              {enrollBusy ? "Inscription..." : "S'inscrire gratuitement"}
+            </button>
+          )}
+          {inscrit && premierAccessible && (
+            <Link to={`/etudiant/chapitre/${premierAccessible.id_chapitre}`} className="btn-primary shrink-0">
+              {pct > 0 ? "Continuer" : "Commencer"} <Icons.arrowRight className="h-4 w-4" />
+            </Link>
+          )}
         </div>
-        <ProgressBar value={pct} />
-        <div className="mt-3 flex flex-wrap gap-4 text-xs text-slate-400">
-          <span>Catégorie : {formation?.nom_categorie}</span>
-          <span>Formateur : {formation?.prenom} {formation?.nom}</span>
-          {average && <span>Note moyenne : {average}/5 ({reviews.length} avis)</span>}
-        </div>
+        {inscritMsg && <Alert type="success" className="mt-4" title={inscritMsg} />}
+        {enrollError && <Alert type="error" className="mt-4" title={getErrorMessage(enrollError)} />}
       </Card>
 
-      <div className="space-y-3">
-        {modules.length === 0 ? (
-          <Card>
-            <p className="py-8 text-center text-sm text-slate-400">Cette formation ne contient pas encore de contenu.</p>
-          </Card>
-        ) : (
-          modules.map((m) => (
-            <Card key={m.id_module} className="p-4">
-              <div className="flex items-center gap-3">
-                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-50 text-brand-600">
-                  <Icons.modules />
-                </span>
-                <div>
-                  <p className="font-semibold text-slate-900">{m.titre}</p>
-                  {m.description && <p className="text-xs text-slate-500 line-clamp-2">{m.description}</p>}
-                </div>
-              </div>
-              {moduleChapters(m.id_module).length > 0 && (
-                <div className="mt-3 space-y-3 border-l-2 border-slate-100 pl-4">
-                  {moduleChapters(m.id_module).map((c) => (
-                    <div key={c.id_chapitre}>
-                      <p className="text-xs font-bold uppercase tracking-wide text-slate-400">{c.titre}</p>
-                      {c.description && <p className="mt-0.5 text-xs text-slate-500 line-clamp-2">{c.description}</p>}
-                      <ul className="mt-2 space-y-1.5">
-                        {chapterLessons(c.id_chapitre).length === 0 && (
-                          <li className="text-sm text-slate-400">Aucune leçon.</li>
-                        )}
-                        {chapterLessons(c.id_chapitre).map((l) => {
-                          const nVids = lessonVideos(l.id_lecon).length;
-                          const nDocs = lessonDocs(l.id_lecon).length;
-                          const quiz = lessonQuiz(l.id_lecon);
-                          const devoir = lessonAssignment(l.id_lecon);
-                          return (
-                            <li key={l.id_lecon}>
-                              <Link
-                                to={`/etudiant/lecon/${l.id_lecon}`}
-                                className="block rounded-lg border border-slate-100 px-3 py-2 transition hover:border-brand-300 hover:bg-brand-50/40"
-                              >
-                                <div className="flex flex-wrap items-center justify-between gap-2">
-                                  <span className="flex items-center gap-2 text-sm font-medium text-slate-800">
-                                    <Icons.lessons />
-                                    {l.titre}
-                                  </span>
-                                  <span className="flex flex-wrap items-center gap-1.5 text-[11px] text-slate-400">
-                                    <span>🎬 {nVids}</span>
-                                    <span>📄 {nDocs}</span>
-                                    {quiz && <span className="rounded-full bg-amber-50 px-2 py-0.5 font-medium text-amber-600">Quiz</span>}
-                                    {devoir && <span className="rounded-full bg-violet-50 px-2 py-0.5 font-medium text-violet-600">Devoir</span>}
-                                  </span>
-                                </div>
-                                {l.description && <p className="mt-0.5 text-xs text-slate-500 line-clamp-1">{l.description}</p>}
-                              </Link>
-                            </li>
-                          );
-                        })}
-                      </ul>
+      <h2 className="mb-3 text-lg font-bold text-slate-900">Programme</h2>
+      {chapitres.length === 0 ? (
+        <Card className="p-8 text-center text-sm text-slate-500">
+          Le programme de cette formation n'est pas encore disponible.
+        </Card>
+      ) : (
+        <ul className="space-y-3">
+          {chapitres.map((ch, i) => {
+            const state = ch.valide ? "valide" : ch.accessible ? "en_cours" : "verrouille";
+            return (
+              <li key={ch.id_chapitre}>
+                {ch.accessible ? (
+                  <Link
+                    to={`/etudiant/chapitre/${ch.id_chapitre}`}
+                    className="flex items-start gap-4 rounded-xl border border-slate-200 bg-white p-4 transition hover:border-brand-300 hover:bg-brand-50/40"
+                  >
+                    <ChapterIndex index={i} state={state} />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="truncate font-semibold text-slate-900">{ch.titre}</p>
+                        <StateBadge state={state} />
+                      </div>
+                      {ch.description && (
+                        <p className="mt-1 line-clamp-2 text-sm text-slate-500">{ch.description}</p>
+                      )}
+                      {ch.a_quiz && (
+                        <p className="mt-1.5 flex items-center gap-1.5 text-xs font-medium text-brand-700">
+                          <Icons.quiz className="h-4 w-4" /> Quiz de validation requis
+                        </p>
+                      )}
                     </div>
-                  ))}
-                </div>
-              )}
-            </Card>
-          ))
-        )}
-      </div>
-
-      <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <Card className="p-5 lg:col-span-2">
-          <h3 className="text-base font-semibold text-slate-900">Avis des étudiants</h3>
-          {reviews.length === 0 ? (
-            <p className="mt-2 text-sm text-slate-400">Aucun avis pour l'instant.</p>
-          ) : (
-            <ul className="mt-3 space-y-3">
-              {reviews.map((r) => (
-                <li key={r.id_avis} className="rounded-xl bg-slate-50 p-3">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium text-slate-800">{r.prenom} {r.nom}</p>
-                    <span className="flex items-center gap-0.5">
-                      {[1, 2, 3, 4, 5].map((i) => (
-                        <Icons.star
-                          key={i}
-                          className={`h-4 w-4 ${i <= r.note ? "fill-accent-500 text-accent-500" : "fill-slate-200 text-slate-200"}`}
-                        />
-                      ))}
-                    </span>
+                  </Link>
+                ) : (
+                  <div className="flex items-start gap-4 rounded-xl border border-slate-100 bg-slate-50 p-4 opacity-75">
+                    <ChapterIndex index={i} state={state} />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="truncate font-semibold text-slate-500">{ch.titre}</p>
+                        <StateBadge state={state} />
+                      </div>
+                      <p className="mt-1 text-xs text-slate-400">
+                        Validez les chapitres précédents pour débloquer.
+                      </p>
+                    </div>
                   </div>
-                  {r.commentaire && <p className="mt-1 text-sm text-slate-600">{r.commentaire}</p>}
-                </li>
-              ))}
-            </ul>
-          )}
-        </Card>
-
-        <Card className="p-5">
-          <h3 className="text-base font-semibold text-slate-900">Votre avis</h3>
-          {myReview ? (
-            <div className="mt-3 rounded-xl bg-green-50 p-3">
-              <p className="text-sm text-green-700">Vous avez déjà laissé un avis ({myReview.note}/5).</p>
-              {myReview.commentaire && <p className="mt-1 text-sm text-green-700">« {myReview.commentaire} »</p>}
-            </div>
-          ) : (
-            <form onSubmit={submitReview} className="mt-3 space-y-3">
-              <FormAlert error={reviewError} />
-              <div>
-                <label className="label">Note</label>
-                <select className="input" value={reviewForm.note} onChange={(e) => setReviewForm({ ...reviewForm, note: e.target.value })}>
-                  {[5, 4, 3, 2, 1].map((n) => (
-                    <option key={n} value={n}>{n} / 5</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="label">Commentaire</label>
-                <textarea className="input" rows={3} value={reviewForm.commentaire} onChange={(e) => setReviewForm({ ...reviewForm, commentaire: e.target.value })} />
-              </div>
-              <button type="submit" className="btn-primary w-full" disabled={reviewBusy}>
-                {reviewBusy ? "Envoi..." : "Publier l'avis"}
-              </button>
-              <FieldError error={reviewError} name="note" />
-            </form>
-          )}
-        </Card>
-      </div>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </div>
   );
+}
+
+function ChapterIndex({ index, state }) {
+  return (
+    <span
+      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-sm font-bold ${
+        state === "valide"
+          ? "bg-green-100 text-green-700"
+          : state === "en_cours"
+            ? "bg-brand-100 text-brand-700"
+            : "bg-slate-200 text-slate-400"
+      }`}
+    >
+      {state === "valide" ? <Icons.check className="h-5 w-5" /> : index + 1}
+    </span>
+  );
+}
+
+function StateBadge({ state }) {
+  if (state === "valide") return <Badge color="green">Validé</Badge>;
+  if (state === "en_cours") return <Badge color="sky">Disponible</Badge>;
+  return <Badge color="gray">Verrouillé</Badge>;
 }

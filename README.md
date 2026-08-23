@@ -1,308 +1,816 @@
-# 🎓 E-Learning Universitaire Locale
+# E-Learning Universitaire Local — TUTORE
 
-> Plateforme d'apprentissage en ligne fonctionnant sur le réseau local (LAN) d'une université.
+Plateforme universitaire locale gratuite d'apprentissage en ligne.
 
----
+Le projet permet aux étudiants de suivre des formations structurées, aux formateurs de créer et gérer leurs contenus pédagogiques et aux administrateurs de superviser la plateforme.
 
-# Présentation
+Le projet s'inspire des principes d'expérience pédagogique d'OpenClassrooms, tout en restant une plateforme locale gratuite.
 
-**E-Learning Universitaire Locale** est une plateforme numérique développée dans le cadre d'un Travail de Fin de Cycle (TFC). Elle vise à améliorer l'enseignement universitaire en mettant à la disposition des enseignants et des étudiants un environnement numérique d'apprentissage inspiré des grandes plateformes internationales telles que **OpenClassrooms**, **Moodle**, **Coursera** et **Udemy**, tout en étant adaptée aux réalités des établissements universitaires de la République Démocratique du Congo.
-
-Contrairement aux plateformes classiques fonctionnant exclusivement sur Internet, cette application est conçue pour fonctionner principalement sur un **réseau local (LAN)** afin de permettre aux étudiants et aux enseignants d'accéder aux ressources pédagogiques même en l'absence d'une connexion Internet.
+Le module de certificat payant d'OpenClassrooms n'est pas intégré au projet.
 
 ---
 
-# Objectifs du projet
+# 1. TECHNOLOGIES
 
-Le projet poursuit les objectifs suivants :
-
-- Numériser la gestion des enseignements universitaires.
-- Centraliser les ressources pédagogiques.
-- Faciliter la communication entre enseignants et étudiants.
-- Assurer le suivi de la progression des apprenants.
-- Organiser les évaluations en ligne.
-- Permettre le dépôt et la correction des devoirs.
-- Offrir un environnement moderne d'apprentissage.
-- Réduire la dépendance à Internet grâce au fonctionnement sur réseau local.
-
----
-
-# Technologies utilisées
-
-## Front-End
-
-- React.js
-- React Router
-- Axios
-- Context API
-- Tailwind CSS
-- HTML5
-- CSS3
-- JavaScript ES6+
-
----
-
-## Back-End
+## Backend
 
 - Node.js
 - Express.js
-- JWT Authentication
-- bcrypt
-- Multer
-- Express Validator
+- MySQL
+- JWT
+- JavaScript
 
----
+## Frontend
+
+- React
+- JavaScript
 
 ## Base de données
 
-- MySQL
-- PHPMyAdmin
-
-La base de données utilisée est :
-
-```
-elearning_db
-```
-
-Elle constitue la référence officielle du projet.
-
----
-
-# Architecture générale
-
-Le projet est organisé selon une architecture Client / Serveur.
-
-```
-React
-      │
-      │ HTTP / REST API
-      ▼
-Express.js
-      │
-      ▼
 MySQL
-```
+
+Base utilisée :
+
+elearningDb
 
 ---
 
-# Structure du projet
+# 2. ARCHITECTURE GÉNÉRALE
 
-```
-Tutore/
+Le projet est organisé autour d'une architecture :
 
-│
-├── backend/
-│
-├── frontend/
-│
-├── database/
-│     └── elearning_db.sql
-│
-├── docs/
-│     ├── 01_ProjectVision.md
-│     ├── 02_DataBaseRules.md
-│     ├── 03_Architecture.md
-│     ├── 04_UI_UX.md
-│     ├── 05_API.md
-│     ├── 06_CodingStandards.md
-│     ├── 07_Roadmap.md
-│     ├── 08_ProjectRules.md
-│     └── 09_PromptTemplates.md
-│
-├── .agents/
-│
-├── README.md
-│
-└── skills-lock.json
-```
+Frontend React
+↓
+API HTTP
+↓
+Backend Express / Node.js
+↓
+Services
+↓
+Repositories / accès aux données
+↓
+MySQL
+↓
+elearningDb
+
+Le frontend ne communique pas directement avec MySQL.
+
+Toutes les opérations sur les données passent par l'API backend.
 
 ---
 
-# Fonctionnalités principales
+# 3. RÔLES
+
+La plateforme possède trois rôles principaux.
 
 ## Administrateur
 
-- Authentification
-- Gestion des utilisateurs
-- Gestion des rôles
-- Gestion des catégories
-- Gestion des notifications
-- Consultation des statistiques
+L'administrateur assure :
+
+- la supervision ;
+- la gestion des utilisateurs ;
+- la gestion globale des formations selon les permissions ;
+- la consultation des données ;
+- l'administration de la plateforme.
 
 ---
 
 ## Formateur
 
-- Création des formations
-- Création des modules
-- Création des chapitres
-- Création des leçons
-- Téléversement des vidéos
-- Téléversement des documents
-- Création des quiz
-- Création des devoirs
-- Correction des travaux
-- Consultation des progressions
+Le formateur peut gérer ses propres formations.
+
+Il peut notamment gérer :
+
+- formations ;
+- chapitres ;
+- sections ;
+- sous-sections ;
+- contenu Rich Text ;
+- quiz ;
+- questions ;
+- réponses ;
+- corrections des questions libres ;
+- étudiants liés à ses formations ;
+- conversations ;
+- notifications.
+
+Un formateur ne doit pas modifier les formations d'un autre formateur.
 
 ---
 
 ## Étudiant
 
-- Création du compte
-- Authentification
-- Consultation des formations
-- Inscription
-- Lecture des leçons
-- Visionnage des vidéos
-- Téléchargement des documents
-- Passage des quiz
-- Dépôt des devoirs
-- Consultation des notes
-- Consultation de la progression
-- Messagerie
-- Notifications
-- Avis sur les formations
+L'étudiant peut notamment :
+
+- consulter le catalogue ;
+- consulter les formations publiées ;
+- s'inscrire ;
+- suivre son parcours ;
+- consulter les chapitres accessibles ;
+- lire le contenu pédagogique ;
+- passer les quiz ;
+- consulter ses résultats ;
+- consulter sa progression ;
+- communiquer avec les interlocuteurs autorisés ;
+- consulter ses notifications ;
+- publier des avis selon les règles du backend.
 
 ---
 
-# Base de données
+# 4. ARCHITECTURE PÉDAGOGIQUE
 
-Le projet utilise une base MySQL nommée :
+La structure actuelle du cours est :
 
-```
-elearning_db
-```
+FORMATION
+↓
+CHAPITRE
+↓
+SECTION
+↓
+SOUS-SECTION
+↓
+CONTENU RICH TEXT
+↓
+QUIZ
 
-Elle contient les tables suivantes :
+Le projet ne repose plus sur l'ancien modèle pédagogique basé principalement sur :
 
-- roles
-- utilisateurs
-- categories
-- formations
-- modules
-- chapitres
-- lecons
-- videos
-- documents
-- inscriptions
-- progressions
-- quiz
-- questions
-- reponses
-- tentatives
-- reponses_etudiants
-- devoirs
-- soumissions
-- avis
-- conversations
-- participant_conversations
-- messages
-- notifications
+- modules ;
+- leçons indépendantes ;
+- devoirs ;
+- documents pédagogiques séparés ;
+- vidéos pédagogiques séparées.
 
-⚠ Cette base constitue la seule référence officielle du projet.
-
-Aucune modification structurelle ne doit être réalisée sans validation explicite.
+Le contenu pédagogique est désormais destiné à être intégré dans le Rich Text.
 
 ---
 
-# Principes d'architecture
+# 5. CONTENU RICH TEXT
 
-Le développement suit les principes suivants :
+Les sous-sections constituent les unités de contenu pédagogique.
 
-- Architecture MVC
-- API REST
-- Clean Architecture
-- SOLID
-- DRY
-- KISS
-- Séparation Front / Back
-- Composants réutilisables
-- Responsive Design
+Une sous-section peut contenir du contenu Rich Text.
+
+Le frontend doit donc fournir un éditeur permettant au formateur de créer et modifier ce contenu.
+
+L'étudiant consulte ensuite ce contenu dans son parcours.
+
+Le backend reste responsable de la validation et de la sécurité du contenu.
 
 ---
 
-# Organisation de la documentation
+# 6. QUIZ
 
-Toute la documentation technique du projet est regroupée dans le dossier :
+Chaque chapitre peut être associé à un quiz selon les règles du backend.
 
-```
-docs/
-```
+Le quiz constitue l'évaluation du chapitre.
 
-Chaque document décrit un aspect particulier du projet :
+Il peut contenir notamment :
 
-| Document | Description |
-|----------|-------------|
-| 01_ProjectVision | Vision générale |
-| 02_DataBaseRules | Règles de la base de données |
-| 03_Architecture | Architecture logicielle |
-| 04_UI_UX | Règles UX/UI |
-| 05_API | Documentation API REST |
-| 06_CodingStandards | Standards de développement |
-| 07_Roadmap | Planning du projet |
-| 08_ProjectRules | Règles générales |
-| 09_PromptTemplates | Prompts destinés à Codex |
+- questions à choix multiple ;
+- questions libres.
 
 ---
 
-# Développement
+# 7. CORRECTION DES QCM
 
-Le projet sera développé progressivement selon les étapes suivantes :
+Pour une question à choix multiple :
 
-1. Configuration du Backend
-2. Configuration du Frontend
-3. Connexion MySQL
-4. Authentification
-5. Gestion des utilisateurs
-6. Gestion des formations
-7. Gestion des contenus
-8. Gestion des quiz
-9. Gestion des devoirs
-10. Messagerie
-11. Notifications
-12. Tableau de bord
-13. Statistiques
-14. Optimisations
-15. Déploiement
+Étudiant
+↓
+répond
+↓
+soumet
+↓
+serveur
+↓
+correction automatique
+↓
+note
+↓
+réussite ou échec
 
----
+La correction est effectuée côté serveur.
 
-# Instructions importantes
-
-Avant toute implémentation :
-
-- Lire entièrement la documentation du dossier `docs`.
-- Respecter la structure de la base de données.
-- Utiliser les Skills présents dans `.agents/skills`.
-- Respecter les conventions définies dans `CODEX_PROJECT_GUIDE.md`.
-- Produire un code propre, documenté et maintenable.
+La bonne réponse ne doit jamais être exposée à l'étudiant avant la correction.
 
 ---
 
-# Public cible
+# 8. CORRECTION DES QUESTIONS LIBRES
 
-Cette plateforme est destinée :
+Pour une question libre :
 
-- aux universités,
-- aux instituts supérieurs,
-- aux enseignants,
-- aux étudiants,
-- aux administrateurs des établissements.
+Étudiant
+↓
+répond
+↓
+soumet
+↓
+tentative à corriger
+↓
+formateur propriétaire
+↓
+correction
+↓
+note
+↓
+réussite ou échec
+
+L'étudiant ne peut pas modifier lui-même sa note.
 
 ---
 
-# Auteur
+# 9. TENTATIVES
 
-Projet réalisé dans le cadre d'un Travail de Fin de Cycle (TFC).
+Une tentative représente le passage d'un quiz.
 
-Titre :
+Son cycle peut être :
 
-**Conception et réalisation d'une plateforme E-Learning Universitaire Locale basée sur les technologies Web modernes.**
+EN_COURS
+↓
+SOUMISE
+ou
+A_CORRIGER
+↓
+REUSSIE
+ou
+ECHOUEE
+
+Le serveur reste responsable de la validation de l'état.
 
 ---
 
-# Licence
+# 10. REPASSAGE
 
-Projet académique.
+Lorsqu'un étudiant échoue à un quiz, il peut le repasser selon les règles backend.
 
-Tous les droits sont réservés à l'auteur dans le cadre de son Travail de Fin de Cycle.
+Lorsqu'un quiz est déjà réussi, le backend peut empêcher une nouvelle tentative.
+
+Le frontend doit suivre la réponse du serveur.
+
+---
+
+# 11. VERROUILLAGE DU PARCOURS
+
+Le parcours est séquentiel.
+
+Exemple :
+
+Chapitre 1
+↓
+Quiz
+↓
+Réussite
+↓
+Chapitre 2
+↓
+Quiz
+↓
+Réussite
+↓
+Chapitre 3
+
+Un chapitre suivant ne doit pas être accessible tant que le quiz précédent n'est pas validé comme réussi.
+
+Cette règle est appliquée côté backend.
+
+Le frontend ne doit pas pouvoir contourner ce verrouillage.
+
+---
+
+# 12. PROGRESSION
+
+La progression est calculée côté serveur.
+
+Le frontend consomme la progression retournée par l'API.
+
+Les informations de progression doivent rester cohérentes entre :
+
+- détail d'une formation ;
+- parcours étudiant ;
+- état des chapitres ;
+- validation des quiz.
+
+Le frontend ne doit pas déclarer arbitrairement une formation comme terminée.
+
+---
+
+# 13. INSCRIPTIONS
+
+L'étudiant peut s'inscrire à une formation lorsque les conditions backend sont respectées.
+
+Une formation non publiée ne doit pas être proposée comme formation publiquement accessible.
+
+Une inscription peut entraîner :
+
+- création de la progression initiale ;
+- création d'une conversation ;
+- notification du formateur.
+
+Le backend est responsable de ces règles.
+
+---
+
+# 14. CONVERSATIONS
+
+Lorsqu'un étudiant s'inscrit à une formation, le système peut créer automatiquement une conversation entre :
+
+FORMATEUR
+↔
+ÉTUDIANT
+
+La conversation est liée au contexte de formation.
+
+Les participants sont contrôlés côté backend.
+
+---
+
+# 15. MESSAGES
+
+Les participants autorisés peuvent envoyer des messages.
+
+Les messages appartiennent à une conversation.
+
+Un nouveau message peut déclencher une notification.
+
+Les dates des messages doivent provenir des données backend réelles.
+
+---
+
+# 16. NOTIFICATIONS
+
+Le système de notifications peut informer les utilisateurs lors d'événements métier.
+
+Les événements actuellement couverts comprennent notamment :
+
+- inscription ;
+- nouveau message ;
+- tentative à corriger ;
+- correction/validation d'un quiz ;
+- nouvel avis.
+
+Le frontend doit afficher :
+
+- notifications ;
+- compteur non lu ;
+- état lu/non lu ;
+- date ;
+- contenu.
+
+---
+
+# 17. AVIS
+
+Les étudiants autorisés peuvent donner un avis sur une formation.
+
+Le backend contrôle :
+
+- l'auteur ;
+- l'inscription ;
+- les doublons ;
+- la formation concernée.
+
+Le frontend ne doit pas pouvoir choisir arbitrairement l'identité de l'auteur.
+
+---
+
+# 18. SÉCURITÉ
+
+L'authentification utilise JWT.
+
+Les requêtes protégées utilisent :
+
+Authorization: Bearer <JWT>
+
+Le backend contrôle :
+
+- identité ;
+- rôle ;
+- propriété des ressources ;
+- accès aux formations ;
+- accès aux tentatives ;
+- accès aux réponses ;
+- accès aux conversations ;
+- autres permissions.
+
+Le frontend ne constitue jamais la couche de sécurité.
+
+---
+
+# 19. BASE DE DONNÉES
+
+Base MySQL :
+
+elearningDb
+
+Le frontend ne se connecte jamais directement à MySQL.
+
+Architecture :
+
+React
+↓
+Express API
+↓
+Services backend
+↓
+MySQL
+
+Les modifications de la base doivent être réalisées en cohérence avec le backend.
+
+---
+
+# 20. API
+
+Base URL backend :
+
+http://localhost:3010
+
+Base URL API :
+
+http://localhost:3010/api
+
+Authentification :
+
+Authorization: Bearer <JWT>
+
+La documentation API principale se trouve dans :
+
+docs/05_API.md
+
+La documentation détaillée des endpoints se trouve dans :
+
+docs/API_DOCUMENTATION.md
+
+Les données de test API se trouvent dans :
+
+docs/API_TEST_DATA.md
+
+---
+
+# 21. FRONTEND
+
+Le frontend utilise React.
+
+Il doit communiquer avec le backend exclusivement via les services API.
+
+Les services frontend doivent être organisés par domaine fonctionnel.
+
+Exemples :
+
+- authService ;
+- categoryService ;
+- formationService ;
+- chapterService ;
+- sectionService ;
+- subSectionService ;
+- quizService ;
+- questionService ;
+- answerService ;
+- attemptService ;
+- studentAnswerService ;
+- progressionService ;
+- enrollmentService ;
+- conversationService ;
+- participantService ;
+- messageService ;
+- notificationService ;
+- reviewService.
+
+Les noms doivent être adaptés aux services réellement présents dans le projet.
+
+---
+
+# 22. RÈGLE BACKEND / FRONTEND
+
+Le backend Express est la source de vérité pour les règles métier.
+
+Le frontend React doit refléter :
+
+- les routes ;
+- les permissions ;
+- les réponses ;
+- les erreurs ;
+- les statuts ;
+- les règles de progression ;
+- les règles de quiz ;
+- les inscriptions ;
+- les conversations ;
+- les notifications.
+
+Le frontend ne doit pas inventer une logique différente.
+
+---
+
+# 23. ERREURS HTTP
+
+Le frontend doit gérer correctement les réponses HTTP.
+
+Notamment :
+
+200
+→ succès
+
+201
+→ création réussie
+
+400
+→ requête invalide
+
+401
+→ non authentifié
+
+403
+→ accès interdit
+
+404
+→ ressource inexistante
+
+409
+→ conflit ou règle métier
+
+422
+→ données invalides lorsque utilisé
+
+500
+→ erreur serveur
+
+---
+
+# 24. TESTS BACKEND
+
+Les tests backend peuvent être lancés depuis le dossier backend avec :
+
+npm test
+
+Les tests doivent vérifier notamment :
+
+- API ;
+- services ;
+- permissions ;
+- rôles ;
+- base de données ;
+- progression ;
+- quiz ;
+- notifications ;
+- conversations ;
+- scénarios cross-role.
+
+---
+
+# 25. TESTS API
+
+Les endpoints peuvent être testés avec :
+
+- Postman ;
+- tests automatisés ;
+- navigateur pour les requêtes GET lorsque pertinent.
+
+Pour les tests manuels, utiliser :
+
+docs/API_TEST_DATA.md
+
+et :
+
+docs/API_DOCUMENTATION.md
+
+---
+
+# 26. TEST CROSS-ROLE
+
+Le projet doit être testé avec les différents rôles.
+
+Exemple :
+
+FORMATEUR
+↓
+crée formation
+↓
+crée chapitres
+↓
+crée sections
+↓
+crée sous-sections
+↓
+ajoute contenu Rich Text
+↓
+crée quiz
+
+Puis :
+
+ÉTUDIANT
+↓
+consulte catalogue
+↓
+s'inscrit
+↓
+accède au chapitre
+↓
+consulte le contenu
+↓
+passe le quiz
+↓
+obtient résultat
+↓
+valide le chapitre
+↓
+accède au chapitre suivant
+
+Puis :
+
+FORMATEUR
+↓
+consulte les résultats
+↓
+corrige les questions libres
+↓
+confirme la note
+
+---
+
+# 27. INSPIRATION OPENCLASSROOMS
+
+Le projet s'inspire d'OpenClassrooms pour :
+
+- l'organisation pédagogique ;
+- le parcours séquentiel ;
+- l'expérience utilisateur ;
+- la séparation des rôles ;
+- la logique d'évaluation ;
+- le fonctionnement des quiz ;
+- la présentation générale du parcours.
+
+Cependant, le projet reste une plateforme universitaire locale gratuite.
+
+Le système de certificats payants d'OpenClassrooms n'est pas intégré.
+
+---
+
+# 28. RÈGLES DE COHÉRENCE
+
+Les éléments suivants doivent rester cohérents :
+
+Backend
+↕
+Documentation API
+↕
+Services React
+↕
+Pages React
+↕
+Interface utilisateur
+
+Une modification backend impliquant une route ou un contrat doit être répercutée dans :
+
+- documentation ;
+- services frontend ;
+- composants concernés ;
+- tests.
+
+---
+
+# 29. DOCUMENTATION DU PROJET
+
+La documentation principale est organisée ainsi :
+
+01_ProjectVision.md
+→ vision et objectifs du projet
+
+02_DataBaseRules.md
+→ règles de base de données
+
+03_Architecture.md
+→ architecture technique et pédagogique
+
+04_UI_UX.md
+→ principes d'interface et expérience utilisateur
+
+05_API.md
+→ contrat API général
+
+06_CodingStandards.md
+→ conventions de développement
+
+07_Roadmap.md
+→ évolution du projet
+
+08_ProjectRules.md
+→ règles générales du projet
+
+Documents techniques complémentaires :
+
+API_DOCUMENTATION.md
+→ documentation détaillée des endpoints
+
+API_TEST_DATA.md
+→ données nécessaires aux tests API
+
+---
+
+# 30. ORDRE DE TRAVAIL RECOMMANDÉ
+
+Pour toute nouvelle fonctionnalité :
+
+1. analyser le besoin ;
+2. vérifier le modèle de données ;
+3. vérifier les routes backend ;
+4. vérifier les services backend ;
+5. vérifier les permissions ;
+6. tester l'API ;
+7. mettre à jour la documentation ;
+8. adapter les services React ;
+9. adapter les composants React ;
+10. tester l'interface ;
+11. effectuer un test cross-role ;
+12. vérifier la non-régression.
+
+---
+
+# 31. SOURCE DE VÉRITÉ
+
+En cas de contradiction entre plusieurs documents :
+
+1. code backend réel ;
+2. schéma réel de la base ;
+3. tests backend ;
+4. documentation API détaillée ;
+5. documentation générale.
+
+La documentation doit être corrigée lorsqu'elle devient différente du comportement réel du backend.
+
+---
+
+# 32. OBJECTIF FINAL
+
+Le projet doit fournir une plateforme locale gratuite permettant :
+
+FORMATEUR
+→ créer et gérer des formations
+
+FORMATION
+→ chapitres
+→ sections
+→ sous-sections
+→ Rich Text
+→ quiz
+
+ÉTUDIANT
+→ catalogue
+→ inscription
+→ parcours
+→ contenu
+→ quiz
+→ progression
+→ conversations
+→ notifications
+→ avis
+
+ADMINISTRATEUR
+→ administration
+→ supervision
+→ gestion selon les permissions
+
+Le tout doit fonctionner à travers :
+
+React
+↓
+API Express
+↓
+Services Node.js
+↓
+MySQL / elearningDb
+
+avec une gestion correcte :
+
+- des rôles ;
+- de l'authentification ;
+- des permissions ;
+- de la progression ;
+- des quiz ;
+- des tentatives ;
+- des conversations ;
+- des notifications ;
+- des données ;
+- de la sécurité.
+
+---
+
+# 33. ÉTAT DU PROJET
+
+Le backend a été restructuré autour du modèle pédagogique :
+
+Formation
+→ Chapitre
+→ Section
+→ Sous-section
+→ Rich Text
+→ Quiz
+
+Le frontend doit maintenant être aligné sur ce contrat.
+
+Avant toute modification importante du frontend, il faut vérifier les routes et contrats réellement disponibles dans :
+
+docs/API_DOCUMENTATION.md
+
+et les données de test dans :
+
+docs/API_TEST_DATA.md

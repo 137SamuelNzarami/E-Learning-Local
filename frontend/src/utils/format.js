@@ -51,6 +51,12 @@ export function fullName(user) {
   return [user?.prenom, user?.nom].filter(Boolean).join(" ") || "Utilisateur";
 }
 
+/** Nom complet depuis une ligne brute backend (prenom/nom à plat). */
+export function fullNameFromRow(row) {
+  if (!row) return "Utilisateur";
+  return [row.prenom, row.nom].filter(Boolean).join(" ") || row.email || "Utilisateur";
+}
+
 export function fileUrl(path) {
   if (!path) return "";
   const apiBase = import.meta.env.VITE_API_URL || "http://localhost:3010/api";

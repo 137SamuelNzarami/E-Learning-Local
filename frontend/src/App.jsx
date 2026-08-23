@@ -21,17 +21,15 @@ import AdminConversations from "./pages/admin/AdminConversations";
 import AdminProgressions from "./pages/admin/AdminProgressions";
 
 import FormateurFormations from "./pages/formateur/FormateurFormations";
-import FormateurContenu from "./pages/formateur/FormateurContenu";
 import FormateurQuizzes from "./pages/formateur/FormateurQuizzes";
-import FormateurDevoirs from "./pages/formateur/FormateurDevoirs";
+import FormateurCorrections from "./pages/formateur/FormateurCorrections";
 import FormationBuilder from "./pages/formateur/FormationBuilder";
 
 import EtudiantCatalogue from "./pages/etudiant/EtudiantCatalogue";
 import EtudiantParcours from "./pages/etudiant/EtudiantParcours";
 import EtudiantFormation from "./pages/etudiant/EtudiantFormation";
-import EtudiantLecon from "./pages/etudiant/EtudiantLecon";
+import EtudiantChapitre from "./pages/etudiant/EtudiantChapitre";
 import EtudiantQuiz from "./pages/etudiant/EtudiantQuiz";
-import EtudiantDevoirs from "./pages/etudiant/EtudiantDevoirs";
 import EtudiantTentatives from "./pages/etudiant/EtudiantTentatives";
 
 const adminRoles = ["Administrateur"];
@@ -90,16 +88,12 @@ export default function App() {
             element={<RoleRoute roles={["Formateur", "Administrateur"]}><FormationBuilder /></RoleRoute>}
           />
           <Route
-            path="/formateur/contenu"
-            element={<RoleRoute roles={["Formateur", "Administrateur"]}><FormateurContenu /></RoleRoute>}
-          />
-          <Route
             path="/formateur/quizzes"
             element={<RoleRoute roles={["Formateur", "Administrateur"]}><FormateurQuizzes /></RoleRoute>}
           />
           <Route
-            path="/formateur/devoirs"
-            element={<RoleRoute roles={["Formateur", "Administrateur"]}><FormateurDevoirs /></RoleRoute>}
+            path="/formateur/corrections"
+            element={<RoleRoute roles={["Formateur", "Administrateur"]}><FormateurCorrections /></RoleRoute>}
           />
 
           <Route
@@ -115,16 +109,12 @@ export default function App() {
             element={<RoleRoute roles={["Etudiant"]}><EtudiantFormation /></RoleRoute>}
           />
           <Route
-            path="/etudiant/lecon/:id"
-            element={<RoleRoute roles={["Etudiant"]}><EtudiantLecon /></RoleRoute>}
+            path="/etudiant/chapitre/:id"
+            element={<RoleRoute roles={["Etudiant"]}><EtudiantChapitre /></RoleRoute>}
           />
           <Route
             path="/etudiant/quiz/:id"
             element={<RoleRoute roles={["Etudiant"]}><EtudiantQuiz /></RoleRoute>}
-          />
-          <Route
-            path="/etudiant/devoirs"
-            element={<RoleRoute roles={["Etudiant"]}><EtudiantDevoirs /></RoleRoute>}
           />
           <Route
             path="/etudiant/tentatives"

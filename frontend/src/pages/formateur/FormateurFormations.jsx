@@ -7,8 +7,9 @@ import Modal from "../../components/ui/Modal";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
 import EmptyState from "../../components/ui/EmptyState";
 import Alert from "../../components/ui/Alert";
+import Badge from "../../components/ui/Badge";
 import FieldError, { FormAlert } from "../../components/ui/FieldError";
-import { formationService } from "../../services/formationService";
+import { formationServiceExtended } from "../../services/formationService";
 import { categoryService } from "../../services/categoryService";
 import { useOwnedFormations } from "../../hooks/useOwnedFormations";
 import { Icons } from "../../components/Icons";
@@ -20,6 +21,7 @@ export default function FormateurFormations() {
   const [modalOpen, setModalOpen] = useState(false);
   const [deleting, setDeleting] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [publishingId, setPublishingId] = useState(null);
   const [form, setForm] = useState({ titre: "", description: "", id_categorie: "" });
   const [formError, setFormError] = useState(null);
 
@@ -34,7 +36,7 @@ export default function FormateurFormations() {
     setBusy(true);
     setFormError(null);
     try {
-      await formationService.store({
+      await formationServiceExtended.store({
         titre: form.titre,
         description: form.description,
         id_categorie: Number(form.id_categorie),
@@ -53,7 +55,7 @@ export default function FormateurFormations() {
   const confirmDelete = async () => {
     setBusy(true);
     try {
-      await formationService.destroy(deleting.id_formation);
+      await formationServiceExtended.destroy(deleting.id_formation);
       setNotice("Formation supprimée.");
       setDeleting(null);
       window.location.reload();
@@ -63,6 +65,20 @@ export default function FormateurFormations() {
       setDeleting(null);
     } finally {
       setBusy(false);
+    }
+  };
+
+  const togglePublish = async (f) => {
+    setPublishingId(f.id_formation);
+    setNotice(null);
+    setFormError(null);
+    try {
+      if (f.statut === "PUBLIEE") await formationServiceExtended.unpublish(f.id_formation);
+      else await formationServiceExtended.publish(f.id_formation);
+      window.location.reload();
+    } catch (err) {
+      setFormError(err);
+      setPublishingId(null);
     }
   };
 
@@ -93,18 +109,31 @@ export default function FormateurFormations() {
         </Card>
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {formations.map((f) => (
+          {formations.map((f) => {
+            const publiee = f.statut === "PUBLIEE";
+            return (
             <Card key={f.id_formation} className="flex flex-col p-5">
-              <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-brand-50 text-brand-600">
-                <Icons.formations />
+              <div className="mb-3 flex items-start justify-between gap-2">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-50 text-brand-600">
+                  <Icons.formations />
+                </div>
+                <Badge color={publiee ? "green" : "amber"}>{publiee ? "Publiée" : "Brouillon"}</Badge>
               </div>
               <h3 className="text-lg font-semibold text-slate-900">{f.titre}</h3>
               <p className="mt-1 line-clamp-2 flex-1 text-sm text-slate-500">{f.description || "Aucune description."}</p>
               <p className="mt-2 text-xs text-slate-400">{f.nom_categorie}</p>
-              <div className="mt-4 flex items-center gap-2">
-                <Link to={`/formateur/formations/${f.id_formation}`} className="btn-primary flex-1 !py-2 text-center text-sm">
+              <div className="mt-4 grid grid-cols-2 gap-2">
+                <Link to={`/formateur/formations/${f.id_formation}`} className="btn-primary !py-2 text-center text-sm col-span-2">
                   Gérer le contenu
                 </Link>
+                <button
+                  type="button"
+                  className={publiee ? "btn-secondary !py-2 !text-xs" : "btn-primary !py-2 !text-xs"}
+                  disabled={publishingId === f.id_formation}
+                  onClick={() => togglePublish(f)}
+                >
+                  {publishingId === f.id_formation ? "..." : publiee ? "Dépublier" : "Publier"}
+                </button>
                 <button
                   type="button"
                   className="btn-ghost !px-3 !py-2 !text-xs text-red-600 hover:bg-red-50"
@@ -114,7 +143,8 @@ export default function FormateurFormations() {
                 </button>
               </div>
             </Card>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -159,8 +189,9 @@ export default function FormateurFormations() {
         onConfirm={confirmDelete}
         busy={busy}
         title="Supprimer cette formation ?"
-        message="Tout le contenu associé (modules, chapitres, leçons) sera supprimé."
+        message="Tout le contenu associé (chapitres, sections, sous-sections, quiz) sera supprimé."
       />
     </div>
   );
 }
+

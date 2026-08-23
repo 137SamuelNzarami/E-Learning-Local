@@ -32,7 +32,7 @@ function Brand() {
       </div>
       <div className="min-w-0 leading-tight">
         <p className="text-[15px] font-bold tracking-tight text-white">E-Learning</p>
-        <p className="truncate font-serif text-[12px] italic text-brand-200">Universitaire Locale</p>
+        <p className="truncate font-serif text-[12px] italic text-brand-200">Universitaire Local</p>
       </div>
     </div>
   );
@@ -78,9 +78,8 @@ export default function AppLayout() {
     ...(user?.role === "Formateur"
       ? [
           { to: "/formateur/formations", icon: Icons.formations, label: "Mes formations" },
-          { to: "/formateur/contenu", icon: Icons.lessons, label: "Contenus pédagogiques" },
           { to: "/formateur/quizzes", icon: Icons.quiz, label: "Quiz" },
-          { to: "/formateur/devoirs", icon: Icons.assignments, label: "Devoirs & notes" },
+          { to: "/formateur/corrections", icon: Icons.grades, label: "Corrections" },
           { to: "/messagerie", icon: Icons.messages, label: "Messagerie" },
         ]
       : []),
@@ -88,7 +87,6 @@ export default function AppLayout() {
       ? [
           { to: "/etudiant/catalogue", icon: Icons.formations, label: "Catalogue" },
           { to: "/etudiant/parcours", icon: Icons.progress, label: "Mon parcours" },
-          { to: "/etudiant/devoirs", icon: Icons.assignments, label: "Mes devoirs" },
           { to: "/etudiant/tentatives", icon: Icons.grades, label: "Mes résultats" },
           { to: "/messagerie", icon: Icons.messages, label: "Messagerie" },
         ]

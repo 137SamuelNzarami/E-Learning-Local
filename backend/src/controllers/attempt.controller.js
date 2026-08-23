@@ -80,6 +80,29 @@ class AttemptController {
   }
 
   /**
+   * Tentatives d'un quiz :
+   * - étudiant : les siennes uniquement ;
+   * - formateur propriétaire : celles de ses étudiants ;
+   * - administrateur : toutes.
+   */
+  async byQuiz(req, res) {
+    try {
+      const { id_quiz } = req.params;
+      const rows = await AttemptService.getAttemptsByQuiz(
+        id_quiz,
+        req.user,
+      );
+      return ApiResponse.success(
+        res,
+        "Tentatives du quiz récupérées avec succès.",
+        rows,
+      );
+    } catch (error) {
+      return ApiResponse.fromError(res, error);
+    }
+  }
+
+  /**
    * Historique des tentatives de l'étudiant courant sur un quiz
    */
   async mine(req, res) {
