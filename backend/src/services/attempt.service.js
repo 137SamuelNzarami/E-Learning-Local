@@ -14,6 +14,7 @@ import { handleDatabaseError } from "../utils/database-errors.js";
 import {
   assertPersonalAccess,
   canGrade,
+  canSeeCorrection,
   isAdmin,
   resolveFormation,
   scopePersonalRowsByFormation,
@@ -51,7 +52,10 @@ class AttemptService {
   }
 
   /**
-   * Une tentative — IDOR strict.
+   * Une tentative :
+   * - l'étudiant propriétaire ;
+   * - le formateur propriétaire du quiz (vue correction) ;
+   * - l'administrateur.
    */
   async getAttemptById(id, user) {
     const attempt = await AttemptRepository.findById(id);
@@ -60,7 +64,11 @@ class AttemptService {
       throw new NotFoundError("Tentative introuvable.");
     }
 
-    assertPersonalAccess(user, attempt.id_utilisateur);
+    const formation = await resolveFormation("quiz", attempt.id_quiz);
+
+    if (!canSeeCorrection(user, formation)) {
+      assertPersonalAccess(user, attempt.id_utilisateur);
+    }
 
     return attempt;
   }

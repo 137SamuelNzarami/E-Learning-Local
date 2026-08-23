@@ -169,6 +169,8 @@ SET statut = CASE
 -- La réponse libre est stockée dans `contenu` (jamais détournée dans id_reponse).
 ALTER TABLE reponses_etudiants MODIFY id_reponse INT NULL DEFAULT NULL;
 ALTER TABLE reponses_etudiants ADD COLUMN contenu TEXT NULL AFTER id_reponse;
+-- note attribuee par le formateur (questions LIBRE, correction manuelle)
+ALTER TABLE reponses_etudiants ADD COLUMN note DECIMAL(5,2) NULL AFTER contenu;
 ALTER TABLE reponses_etudiants ADD INDEX idx_reponses_etu_tentative_question (id_tentative, id_question);
 
 -- ------------------------------------------------------------

@@ -143,6 +143,102 @@ class FormationRepository {
         return result.affectedRows;
     }
 
+    /**
+     * Suppression en cascade (transactionnel).
+     *
+     * Les clés étrangères sont en RESTRICT : on supprime donc explicitement
+     * tous les descendants, du plus profond au plus proche :
+     *
+     * Chaîne pédagogique : reponses_etudiants -> tentatives -> reponses ->
+     * questions -> quiz -> sous_sections -> sections -> chapitres.
+     * Données étudiantes : progression_chapitres -> avis -> progressions ->
+     * inscriptions. Puis la formation elle-même.
+     */
+    async deleteCascade(id) {
+        const conn = await pool.getConnection();
+        try {
+            await conn.beginTransaction();
+
+            await conn.query(
+                `DELETE re FROM reponses_etudiants re
+                 JOIN tentatives t ON t.id_tentative = re.id_tentative
+                 JOIN quiz q ON q.id_quiz = t.id_quiz
+                 JOIN chapitres c ON c.id_chapitre = q.id_chapitre
+                 WHERE c.id_formation = ?`,
+                [id]
+            );
+
+            await conn.query(
+                `DELETE t FROM tentatives t
+                 JOIN quiz q ON q.id_quiz = t.id_quiz
+                 JOIN chapitres c ON c.id_chapitre = q.id_chapitre
+                 WHERE c.id_formation = ?`,
+                [id]
+            );
+
+            await conn.query(
+                `DELETE r FROM reponses r
+                 JOIN questions qu ON qu.id_question = r.id_question
+                 JOIN quiz q ON q.id_quiz = qu.id_quiz
+                 JOIN chapitres c ON c.id_chapitre = q.id_chapitre
+                 WHERE c.id_formation = ?`,
+                [id]
+            );
+
+            await conn.query(
+                `DELETE qu FROM questions qu
+                 JOIN quiz q ON q.id_quiz = qu.id_quiz
+                 JOIN chapitres c ON c.id_chapitre = q.id_chapitre
+                 WHERE c.id_formation = ?`,
+                [id]
+            );
+
+            await conn.query(
+                `DELETE q FROM quiz q
+                 JOIN chapitres c ON c.id_chapitre = q.id_chapitre
+                 WHERE c.id_formation = ?`,
+                [id]
+            );
+
+            await conn.query(
+                `DELETE ss FROM sous_sections ss
+                 JOIN sections s ON s.id_section = ss.id_section
+                 JOIN chapitres c ON c.id_chapitre = s.id_chapitre
+                 WHERE c.id_formation = ?`,
+                [id]
+            );
+
+            await conn.query(
+                `DELETE s FROM sections s
+                 JOIN chapitres c ON c.id_chapitre = s.id_chapitre
+                 WHERE c.id_formation = ?`,
+                [id]
+            );
+
+            await conn.query(
+                `DELETE pc FROM progression_chapitres pc
+                 JOIN chapitres c ON c.id_chapitre = pc.id_chapitre
+                 WHERE c.id_formation = ?`,
+                [id]
+            );
+
+            await conn.query("DELETE FROM chapitres WHERE id_formation = ?", [id]);
+
+            await conn.query("DELETE FROM avis WHERE id_formation = ?", [id]);
+            await conn.query("DELETE FROM progressions WHERE id_formation = ?", [id]);
+            await conn.query("DELETE FROM inscriptions WHERE id_formation = ?", [id]);
+            await conn.query("DELETE FROM formations WHERE id_formation = ?", [id]);
+
+            await conn.commit();
+            return true;
+        } catch (error) {
+            await conn.rollback();
+            throw error;
+        } finally {
+            conn.release();
+        }
+    }
+
 }
 
 export default new FormationRepository();

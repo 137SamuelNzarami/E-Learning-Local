@@ -172,6 +172,10 @@ class FormationService {
 
   /**
    * Supprimer une formation (propriétaire / admin)
+   *
+   * Suppression en cascade transactionnelle : chapitres, sections,
+   * sous-sections, quiz, questions, réponses, tentatives, réponses
+   * étudiantes, progressions, inscriptions et avis.
    */
   async deleteFormation(id, user) {
     const formation = await FormationRepository.findById(id);
@@ -183,11 +187,8 @@ class FormationService {
     await assertCanManage("formation", id, user);
 
     try {
-      return await FormationRepository.delete(id);
+      return await FormationRepository.deleteCascade(id);
     } catch (error) {
-      if (error.code === "ER_ROW_IS_REFERENCED_2") {
-        throw new ConflictError("Impossible de supprimer cette formation car des étudiants y sont déjà inscrits.");
-      }
       handleDatabaseError(error);
     }
   }

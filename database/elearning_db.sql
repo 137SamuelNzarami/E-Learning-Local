@@ -138,6 +138,7 @@ CREATE TABLE reponses_etudiants(
  id_question INT NOT NULL,
  id_reponse INT NULL DEFAULT NULL,
  contenu TEXT NULL,
+ note DECIMAL(5,2) NULL,
  INDEX idx_reponses_etu_tentative_question (id_tentative, id_question),
  FOREIGN KEY(id_tentative) REFERENCES tentatives(id_tentative),
  FOREIGN KEY(id_question) REFERENCES questions(id_question),

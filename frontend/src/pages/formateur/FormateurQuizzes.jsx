@@ -138,9 +138,20 @@ export default function FormateurQuizzes() {
     try {
       const payload = { titre: quizForm.titre, score_reussite: Number(quizForm.score_reussite) };
       let saved;
-      if (quizModal.item) saved = await quizService.update(quizModal.item.id_quiz, payload);
-      else saved = await quizService.store({ ...payload, id_chapitre: Number(quizModal.id_chapitre) });
-      const idChapitre = Number(quizModal.item ? quizModal.item.id_chapitre : quizModal.id_chapitre);
+      if (quizModal.item) {
+        // update : le backend renvoie la ligne complète
+        saved = await quizService.update(quizModal.item.id_quiz, payload);
+      } else {
+        // create : le backend renvoie { id } -> on recharge la ligne complète
+        const created = await quizService.store({
+          ...payload,
+          id_chapitre: Number(quizModal.id_chapitre),
+        });
+        saved = await quizService.show(created.data.id);
+      }
+      const idChapitre = Number(
+        quizModal.item ? quizModal.item.id_chapitre : quizModal.id_chapitre,
+      );
       setQuizzesByChapter((m) => ({ ...m, [idChapitre]: saved.data }));
       setChapters((cs) => cs.map((c) => (c.id_chapitre === idChapitre ? { ...c, a_quiz: true } : c)));
       setNotice("Quiz enregistré.");
