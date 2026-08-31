@@ -5,10 +5,12 @@
 @layer base {
   html {
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
+    scroll-behavior: smooth;
   }
   body {
-    @apply bg-canvas text-ink-soft;
+    @apply bg-canvas text-ink font-sans;
   }
   ::selection {
     @apply bg-brand-200 text-brand-950;
@@ -17,33 +19,64 @@
   input[type="radio"] {
     accent-color: #356a51;
   }
+  * {
+    @apply border-slate-200;
+  }
 }
 
 @layer components {
+  /* ─── FORM ELEMENTS ─── */
   .input {
-    @apply w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 shadow-soft outline-none transition focus:border-brand-400 focus:ring-4 focus:ring-brand-500/15 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500;
+    @apply w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 shadow-soft outline-none transition-all duration-200 focus:border-brand-400 focus:ring-4 focus:ring-brand-500/15 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500;
+  }
+  .input:focus {
+    @apply ring-brand-500/20;
   }
   .label {
     @apply mb-1.5 block text-[13px] font-semibold text-slate-700;
   }
+  .select {
+    @apply input appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2216%22%20height%3D%2216%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%236b7f74%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22m6%209%206%206%206-6%22%2F%3E%3C%2Fsvg%3E')] bg-[length:18px] bg-[right_0.75rem_center] bg-no-repeat pr-10;
+  }
+  textarea.input {
+    @apply min-h-[100px] resize-y;
+  }
+
+  /* ─── BUTTONS ─── */
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition focus:outline-none focus-visible:ring-4 focus-visible:ring-brand-500/20 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-200 focus:outline-none focus-visible:ring-4 focus-visible:ring-brand-500/20 disabled:cursor-not-allowed disabled:opacity-50 active:scale-[0.98];
   }
   .btn-primary {
-    @apply btn bg-brand-700 text-white shadow-soft hover:bg-brand-800 active:bg-brand-900;
+    @apply btn bg-brand-700 text-white shadow-soft hover:bg-brand-800 hover:shadow-md active:bg-brand-900;
   }
   .btn-secondary {
-    @apply btn border border-slate-200 bg-white text-slate-700 shadow-soft hover:border-slate-300 hover:bg-slate-50;
+    @apply btn border border-slate-200 bg-white text-slate-700 shadow-soft hover:border-slate-300 hover:bg-slate-50 hover:shadow-md;
   }
   .btn-danger {
-    @apply btn bg-red-700 text-white shadow-soft hover:bg-red-800;
+    @apply btn bg-danger-600 text-white shadow-soft hover:bg-danger-700 hover:shadow-md;
   }
   .btn-ghost {
     @apply btn text-slate-600 hover:bg-slate-100 hover:text-slate-900;
   }
-  .card {
-    @apply rounded-2xl border border-slate-200/80 bg-white shadow-card;
+  .btn-sm {
+    @apply !px-3 !py-1.5 !text-xs;
   }
+  .btn-icon {
+    @apply !p-2;
+  }
+
+  /* ─── CARDS ─── */
+  .card {
+    @apply rounded-2xl border border-slate-200/80 bg-white shadow-card transition-shadow duration-200;
+  }
+  .card-hover {
+    @apply card hover:shadow-lift hover:border-brand-200/60;
+  }
+  .card-interactive {
+    @apply card-hover cursor-pointer hover:-translate-y-0.5;
+  }
+
+  /* ─── TABLES ─── */
   .th {
     @apply px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500;
   }
@@ -52,5 +85,108 @@
   }
   .tabular {
     font-variant-numeric: tabular-nums;
+  }
+
+  /* ─── BADGES ─── */
+  .badge {
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold;
+  }
+  .badge-success {
+    @apply badge bg-success-50 text-success-700 ring-1 ring-success-500/20;
+  }
+  .badge-danger {
+    @apply badge bg-danger-50 text-danger-700 ring-1 ring-danger-500/20;
+  }
+  .badge-warning {
+    @apply badge bg-warning-50 text-warning-600 ring-1 ring-warning-500/20;
+  }
+  .badge-brand {
+    @apply badge bg-brand-50 text-brand-700 ring-1 ring-brand-500/20;
+  }
+  .badge-neutral {
+    @apply badge bg-slate-100 text-slate-600 ring-1 ring-slate-500/10;
+  }
+
+  /* ─── SIDEBAR ─── */
+  .sidebar-link {
+    @apply flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150;
+  }
+  .sidebar-link-active {
+    @apply bg-brand-700 text-white shadow-soft;
+  }
+  .sidebar-link-inactive {
+    @apply text-brand-100/70 hover:bg-white/[0.06] hover:text-white;
+  }
+  .sidebar-admin-active {
+    @apply bg-white/10 text-white;
+  }
+  .sidebar-admin-inactive {
+    @apply text-slate-400 hover:bg-white/[0.04] hover:text-slate-200;
+  }
+
+  /* ─── PAGE SECTIONS ─── */
+  .page-header {
+    @apply mb-6;
+  }
+  .page-title {
+    @apply text-2xl font-bold tracking-tight text-slate-900;
+  }
+  .page-subtitle {
+    @apply mt-1 text-sm text-slate-500;
+  }
+
+  /* ─── STAT CARDS ─── */
+  .stat-card {
+    @apply card p-4;
+  }
+  .stat-icon {
+    @apply flex h-10 w-10 items-center justify-center rounded-xl;
+  }
+  .stat-value {
+    @apply text-2xl font-bold tabular-nums text-slate-900;
+  }
+  .stat-label {
+    @apply text-xs font-medium text-slate-500;
+  }
+
+  /* ─── EMPTY STATE ─── */
+  .empty-state {
+    @apply flex flex-col items-center justify-center py-12 text-center;
+  }
+  .empty-icon {
+    @apply mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100 text-slate-400;
+  }
+
+  /* ─── GRADIENTS ─── */
+  .gradient-brand {
+    @apply bg-gradient-to-br from-brand-600 to-brand-800;
+  }
+  .gradient-warm {
+    @apply bg-gradient-to-br from-accent-50 to-accent-100;
+  }
+  .gradient-hero {
+    @apply bg-gradient-to-br from-brand-600 via-brand-700 to-brand-900;
+  }
+
+  /* ─── TRANSITIONS ─── */
+  .transition-base {
+    @apply transition-all duration-200 ease-out;
+  }
+}
+
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: #c3c3b6 transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: #c3c3b6;
+    border-radius: 3px;
   }
 }

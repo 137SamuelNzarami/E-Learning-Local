@@ -126,7 +126,7 @@ CREATE TABLE questions(
   id_question INT AUTO_INCREMENT PRIMARY KEY,
   id_quiz INT NOT NULL,
   enonce TEXT,
-  type ENUM('QCM','LIBRE') NOT NULL DEFAULT 'QCM',
+  type ENUM('QCM') NOT NULL DEFAULT 'QCM',
   points INT NOT NULL DEFAULT 1,
   FOREIGN KEY(id_quiz) REFERENCES quiz(id_quiz)
 ) ENGINE=InnoDB;
@@ -144,10 +144,9 @@ CREATE TABLE tentatives(
   id_utilisateur INT NOT NULL,
   id_quiz INT NOT NULL,
   note DECIMAL(5,2),
-  statut ENUM('EN_COURS','SOUMISE','A_CORRIGER','REUSSIE','ECHOUEE')
+  statut ENUM('EN_COURS','SOUMISE','REUSSIE','ECHOUEE')
     NOT NULL DEFAULT 'EN_COURS',
   date_soumission DATETIME NULL,
-  date_correction DATETIME NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY(id_utilisateur) REFERENCES utilisateurs(id_utilisateur),
   FOREIGN KEY(id_quiz) REFERENCES quiz(id_quiz)
@@ -158,7 +157,6 @@ CREATE TABLE reponses_etudiants(
   id_tentative INT NOT NULL,
   id_question INT NOT NULL,
   id_reponse INT NULL DEFAULT NULL,
-  contenu TEXT NULL,
   INDEX idx_reponses_etu_tentative_question (id_tentative, id_question),
   FOREIGN KEY(id_tentative) REFERENCES tentatives(id_tentative),
   FOREIGN KEY(id_question) REFERENCES questions(id_question),
@@ -461,11 +459,9 @@ INSERT INTO questions
 (id_question, id_quiz, enonce, type, points) VALUES
 (1, 1, 'Quel élément est généralement utilisé pour consulter une page web ?', 'QCM', 1),
 (2, 1, 'Quel protocole est couramment utilisé pour échanger des ressources web ?', 'QCM', 1),
-(3, 1, 'Expliquez en quelques mots le rôle d’un serveur web.', 'LIBRE', 2),
 
 (4, 2, 'Quelle balise représente le titre principal d’une page ?', 'QCM', 1),
 (5, 2, 'Quelle balise permet de créer un paragraphe ?', 'QCM', 1),
-(6, 2, 'Pourquoi utiliser des balises HTML sémantiques ?', 'LIBRE', 2),
 
 (7, 3, 'Quelle propriété CSS modifie la couleur du texte ?', 'QCM', 1),
 (8, 3, 'Quel mécanisme CSS facilite l’alignement horizontal et vertical ?', 'QCM', 1),
@@ -474,7 +470,6 @@ INSERT INTO questions
 (10, 4, 'Quel type représente une valeur vraie ou fausse ?', 'QCM', 1),
 
 (11, 5, 'Quel mot-clé permet de déclarer une fonction classique ?', 'QCM', 1),
-(12, 5, 'À quoi sert une boucle ?', 'LIBRE', 2),
 
 (13, 6, 'Quelle structure contient une collection ordonnée de valeurs ?', 'QCM', 1),
 (14, 6, 'Comment accéder à une propriété d’un objet ?', 'QCM', 1),
@@ -486,10 +481,8 @@ INSERT INTO questions
 (18, 8, 'Quelle commande permet d’ajouter une ligne ?', 'QCM', 1),
 
 (19, 9, 'Quel mécanisme permet de relier deux tables ?', 'QCM', 1),
-(20, 9, 'Quel est le rôle d’une clé étrangère ?', 'LIBRE', 2),
 
-(21, 10, 'Quelle pratique améliore la sécurité d’un compte ?', 'QCM', 1),
-(22, 10, 'Pourquoi organiser correctement ses fichiers ?', 'LIBRE', 2);
+(21, 10, 'Quelle pratique améliore la sécurité d’un compte ?', 'QCM', 1);
 
 -- ============================================================
 -- 13. REPONSES
@@ -573,42 +566,39 @@ INSERT INTO reponses
 -- les différentes interfaces frontend.
 
 INSERT INTO tentatives
-(id_tentative, id_utilisateur, id_quiz, note, statut, date_soumission, date_correction, created_at) VALUES
-(1, 6, 1, 100.00, 'REUSSIE', '2026-03-07 09:30:00', NULL, '2026-03-07 09:20:00'),
-(2, 6, 2, 75.00, 'REUSSIE', '2026-03-08 10:30:00', NULL, '2026-03-08 10:20:00'),
-(3, 6, 3, 40.00, 'ECHOUEE', '2026-03-09 11:30:00', NULL, '2026-03-09 11:20:00'),
-(4, 7, 1, 50.00, 'REUSSIE', '2026-03-10 09:30:00', NULL, '2026-03-10 09:20:00'),
-(5, 7, 4, NULL, 'A_CORRIGER', '2026-03-11 14:30:00', NULL, '2026-03-11 14:15:00'),
-(6, 7, 5, NULL, 'A_CORRIGER', '2026-03-12 15:30:00', NULL, '2026-03-12 15:15:00'),
-(7, 6, 4, NULL, 'EN_COURS', NULL, NULL, '2026-03-13 10:00:00');
+(id_tentative, id_utilisateur, id_quiz, note, statut, date_soumission, created_at) VALUES
+(1, 6, 1, 100.00, 'REUSSIE', '2026-03-07 09:30:00', '2026-03-07 09:20:00'),
+(2, 6, 2, 75.00, 'REUSSIE', '2026-03-08 10:30:00', '2026-03-08 10:20:00'),
+(3, 6, 3, 40.00, 'ECHOUEE', '2026-03-09 11:30:00', '2026-03-09 11:20:00'),
+(4, 7, 1, 50.00, 'REUSSIE', '2026-03-10 09:30:00', '2026-03-10 09:20:00'),
+(5, 7, 4, 100.00, 'REUSSIE', '2026-03-11 14:30:00', '2026-03-11 14:15:00'),
+(6, 7, 5, 100.00, 'REUSSIE', '2026-03-12 15:30:00', '2026-03-12 15:15:00'),
+(7, 6, 4, NULL, 'EN_COURS', NULL, '2026-03-13 10:00:00');
 
 -- ============================================================
 -- 15. REPONSES ETUDIANTS
 -- ============================================================
 
 INSERT INTO reponses_etudiants
-(id_reponse_etudiant, id_tentative, id_question, id_reponse, contenu) VALUES
-(1, 1, 1, 1, NULL),
-(2, 1, 2, 5, NULL),
-(3, 1, 3, NULL, 'Le serveur reçoit les requêtes et renvoie les ressources demandées.'),
+(id_reponse_etudiant, id_tentative, id_question, id_reponse) VALUES
+(1, 1, 1, 1),
+(2, 1, 2, 5),
 
-(4, 2, 4, 8, NULL),
-(5, 2, 5, 11, NULL),
-(6, 2, 6, NULL, 'Les balises sémantiques rendent la structure plus claire et accessible.'),
+(4, 2, 4, 8),
+(5, 2, 5, 11),
 
-(7, 3, 7, 15, NULL),
-(8, 3, 8, 17, NULL),
+(7, 3, 7, 15),
+(8, 3, 8, 17),
 
-(9, 4, 1, 1, NULL),
-(10, 4, 2, 5, NULL),
+(9, 4, 1, 1),
+(10, 4, 2, 5),
 
-(11, 5, 9, 20, NULL),
-(12, 5, 10, 23, NULL),
+(11, 5, 9, 20),
+(12, 5, 10, 23),
 
-(13, 6, 11, 26, NULL),
-(14, 6, 12, NULL, 'Une boucle permet de répéter une opération tant qu’une condition est satisfaite.'),
+(13, 6, 11, 26),
 
-(15, 7, 9, 20, NULL);
+(15, 7, 9, 20);
 
 -- ============================================================
 -- 16. PROGRESSION DES CHAPITRES
@@ -691,11 +681,9 @@ INSERT INTO notifications
 (4, 6, 'Nouvelle formation', 'Une nouvelle formation est disponible dans le catalogue.', 0, '2026-03-09 08:00:00'),
 
 (5, 7, 'Bienvenue', 'Bienvenue sur la plateforme E-Learning.', 1, '2026-03-04 09:30:00'),
-(6, 7, 'Quiz à corriger', 'Votre réponse libre a été envoyée au formateur pour correction.', 0, '2026-03-11 14:31:00'),
 (7, 7, 'Nouveau message', 'Vous avez reçu un nouveau message de votre formateur.', 0, '2026-03-08 16:01:00'),
 
 (8, 4, 'Nouvelle inscription', 'Un étudiant vient de rejoindre votre formation.', 0, '2026-03-01 09:02:00'),
-(9, 4, 'Tentative à corriger', 'Une tentative de quiz contient une réponse libre à corriger.', 0, '2026-03-11 14:32:00'),
 (10, 5, 'Nouvelle inscription', 'Un étudiant vient de rejoindre votre formation SQL.', 1, '2026-03-06 15:00:00');
 
 -- ============================================================

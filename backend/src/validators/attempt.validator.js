@@ -10,8 +10,7 @@ export const startAttemptValidator = [];
  * Soumission d'une tentative :
  * {
  *   reponses: [
- *     { id_question, id_reponses: [10, 11] },   // QCM
- *     { id_question, contenu: "Ma réponse" }    // LIBRE
+ *     { id_question, id_reponses: [10, 11] }   // QCM uniquement
  *   ]
  * }
  */
@@ -37,9 +36,4 @@ export const submitAttemptValidator = [
     .optional()
     .isInt({ min: 1 })
     .withMessage("Chaque identifiant de réponse doit être un entier."),
-
-  body("reponses.*.contenu")
-    .optional({ values: "null" })
-    .isString()
-    .withMessage("contenu doit être une chaîne de caractères."),
 ];

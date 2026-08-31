@@ -1,6 +1,5 @@
-import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
-import PageHeader from "../../components/ui/PageHeader";
+import { useState, useCallback, useEffect } from "react";
+import { useOutletContext, useParams } from "react-router-dom";
 import Card from "../../components/ui/Card";
 import Spinner from "../../components/ui/Spinner";
 import Modal from "../../components/ui/Modal";
@@ -9,158 +8,60 @@ import Alert from "../../components/ui/Alert";
 import Badge from "../../components/ui/Badge";
 import FieldError, { FormAlert } from "../../components/ui/FieldError";
 import RichTextEditor, { MAX_CONTENU } from "../../components/editor/RichTextEditor";
-import { formationServiceExtended } from "../../services/formationService";
+import RichTextRenderer from "../../components/content/RichTextRenderer";
 import { chapterServiceExtended } from "../../services/chapterService";
 import { sectionServiceExtended } from "../../services/sectionService";
 import { sousSectionServiceExtended } from "../../services/sousSectionService";
+import { formationServiceExtended } from "../../services/formationService";
 import { getErrorMessage } from "../../utils/format";
 import { Icons } from "../../components/Icons";
 
-/**
- * BUILDER FORMATEUR — architecture backend :
- * Formation → Chapitres → Sections → Sous-sections (rich text ≤ 2 Mo) → Quiz fin de chapitre.
- * Réordonnancement : PATCH .../reorder avec la liste COMPLÈTE des ids du parent.
- */
 export default function FormationBuilder() {
   const { id } = useParams();
+  const {
+    formation,
+    chapters,
+    sectionsByChapter,
+    sousBySection,
+    load,
+    loadSections,
+    loadSousSections,
+    refreshChapters,
+    setNotice,
+    selectTarget,
+    clearSelectTarget,
+  } = useOutletContext();
 
-  const [formation, setFormation] = useState(null);
-  const [chapters, setChapters] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [notice, setNotice] = useState(null);
   const [busy, setBusy] = useState(false);
-
-  const [formationForm, setFormationForm] = useState({ titre: "", description: "" });
-  const [savingFormation, setSavingFormation] = useState(false);
-  const [formationError, setFormationError] = useState(null);
-  const [publishBusy, setPublishBusy] = useState(false);
-
-  const [modal, setModal] = useState(null); // { kind:'chapter'|'section'|'sous', item?, parentId }
+  const [error, setError] = useState(null);
+  const [modal, setModal] = useState(null);
   const [form, setForm] = useState({ titre: "", description: "", contenu: "" });
   const [formError, setFormError] = useState(null);
+  const [deleting, setDeleting] = useState(null);
+  const [previewMode, setPreviewMode] = useState(false);
+  const [publishBusy, setPublishBusy] = useState(false);
+  const [expandedChapters, setExpandedChapters] = useState(new Set());
 
-  const [deleting, setDeleting] = useState(null); // { kind, item }
-
-  const [sectionsByChapter, setSectionsByChapter] = useState({});
-  const [openChapter, setOpenChapter] = useState(null);
-  const [openSection, setOpenSection] = useState(null);
-  const [sousBySection, setSousBySection] = useState({});
-
-  /* ---------------------------------------------------------------- */
-  /* Chargement                                                        */
-  /* ---------------------------------------------------------------- */
-
-  const load = async () => {
-    setLoading(true);
-    try {
-      const f = await formationServiceExtended.show(id);
-      const ch = await chapterServiceExtended.byFormation(id);
-      setFormation(f.data);
-      setFormationForm({ titre: f.data?.titre || "", description: f.data?.description || "" });
-      setChapters(Array.isArray(ch.data) ? ch.data : []);
-      setError(null);
-    } catch (err) {
-      setError(err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [formationForm, setFormationForm] = useState({
+    titre: formation?.titre || "",
+    description: formation?.description || "",
+  });
+  const [savingFormation, setSavingFormation] = useState(false);
 
   useEffect(() => {
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
-
-  const loadSections = async (idChapitre) => {
-    const res = await sectionServiceExtended.byChapter(idChapitre);
-    const list = res.data || [];
-    setSectionsByChapter((m) => ({ ...m, [idChapitre]: list }));
-    return list;
-  };
-
-  const loadSousSections = async (idSection) => {
-    const res = await sousSectionServiceExtended.bySection(idSection);
-    const list = res.data || [];
-    setSousBySection((m) => ({ ...m, [idSection]: list }));
-    return list;
-  };
-
-  const toggleChapter = async (chapter) => {
-    const open = openChapter === chapter.id_chapitre;
-    setOpenChapter(open ? null : chapter.id_chapitre);
-    if (!open && !sectionsByChapter[chapter.id_chapitre]) {
-      try {
-        await loadSections(chapter.id_chapitre);
-      } catch (err) {
-        setError(err);
-      }
+    if (formation) {
+      setFormationForm((prev) => ({
+        titre: prev.titre || formation.titre || "",
+        description: prev.description || formation.description || "",
+      }));
     }
-  };
-
-  const toggleSection = async (section) => {
-    const open = openSection === section.id_section;
-    setOpenSection(open ? null : section.id_section);
-    if (!open && !sousBySection[section.id_section]) {
-      try {
-        await loadSousSections(section.id_section);
-      } catch (err) {
-        setError(err);
-      }
-    }
-  };
-
-  /* ---------------------------------------------------------------- */
-  /* Formation : infos + publication                                   */
-  /* ---------------------------------------------------------------- */
-
-  const saveFormation = async (e) => {
-    e.preventDefault();
-    setSavingFormation(true);
-    setFormationError(null);
-    try {
-      await formationServiceExtended.update(id, {
-        titre: formationForm.titre,
-        description: formationForm.description,
-      });
-      setNotice("Informations de la formation mises à jour.");
-      const f = await formationServiceExtended.show(id);
-      setFormation(f.data);
-    } catch (err) {
-      setFormationError(err);
-    } finally {
-      setSavingFormation(false);
-    }
-  };
-
-  const togglePublish = async () => {
-    setPublishBusy(true);
-    setFormationError(null);
-    try {
-      if (formation.statut === "PUBLIEE") await formationServiceExtended.unpublish(id);
-      else await formationServiceExtended.publish(id);
-      const f = await formationServiceExtended.show(id);
-      setFormation(f.data);
-      setNotice(
-        f.data.statut === "PUBLIEE"
-          ? "Formation publiée — visible dans le catalogue étudiant."
-          : "Formation dépubliée — masquée du catalogue étudiant.",
-      );
-    } catch (err) {
-      setFormationError(err);
-    } finally {
-      setPublishBusy(false);
-    }
-  };
-
-  /* ---------------------------------------------------------------- */
-  /* CRUD chapitres / sections / sous-sections                         */
-  /* ---------------------------------------------------------------- */
+  }, [formation?.id_formation]);
 
   const openCreate = (kind, parentId = null) => {
     setModal({ kind, parentId, item: null });
     setForm({ titre: "", description: "", contenu: "" });
     setFormError(null);
+    setPreviewMode(false);
   };
 
   const openEdit = (kind, item, parentId = null) => {
@@ -168,19 +69,27 @@ export default function FormationBuilder() {
     setForm({
       titre: item.titre || "",
       description: item.description || "",
-      // pour une sous-section, le contenu complet doit être chargé avant
-      contenu: kind === "sous" ? item.contenu ?? null : undefined,
+      contenu: kind === "sous" || kind === "section" ? item.contenu ?? "" : undefined,
     });
     setFormError(null);
-    if (kind === "sous" && (item.contenu === null || item.contenu === undefined)) {
-      sousSectionServiceExtended
-        .show(item.id_sous_section)
-        .then((res) => {
-          setForm((f) => ({ ...f, contenu: res.data.contenu || "" }));
-        })
+    setPreviewMode(false);
+    if (
+      (kind === "sous" || kind === "section") &&
+      (item.contenu === null || item.contenu === undefined)
+    ) {
+      const fetch = kind === "sous" ? sousSectionServiceExtended.show(item.id_sous_section) : sectionServiceExtended.show(item.id_section);
+      fetch
+        .then((res) => setForm((f) => ({ ...f, contenu: res.data.contenu || "" })))
         .catch((err) => setError(err));
     }
   };
+
+  useEffect(() => {
+    if (!selectTarget) return;
+    const { kind, item, parentId } = selectTarget;
+    openEdit(kind, item, parentId);
+    clearSelectTarget();
+  }, [selectTarget]);
 
   const save = async (e) => {
     e.preventDefault();
@@ -195,23 +104,15 @@ export default function FormationBuilder() {
         else await chapterServiceExtended.store({ ...payload, id_formation: Number(id) });
         await refreshChapters();
       } else if (kind === "section") {
-        const payload = { titre: form.titre, description: form.description };
+        const contenu = (form.contenu || "").slice(0, MAX_CONTENU);
+        const payload = { titre: form.titre, contenu };
         if (item) await sectionServiceExtended.update(item.id_section, payload);
         else await sectionServiceExtended.store({ ...payload, id_chapitre: Number(parentId) });
         await loadSections(Number(parentId));
       } else if (kind === "sous") {
         const contenu = (form.contenu || "").slice(0, MAX_CONTENU);
-        if (item)
-          await sousSectionServiceExtended.update(item.id_sous_section, {
-            titre: form.titre,
-            contenu,
-          });
-        else
-          await sousSectionServiceExtended.store({
-            titre: form.titre,
-            contenu,
-            id_section: Number(parentId),
-          });
+        if (item) await sousSectionServiceExtended.update(item.id_sous_section, { titre: form.titre, contenu });
+        else await sousSectionServiceExtended.store({ titre: form.titre, contenu, id_section: Number(parentId) });
         await loadSousSections(Number(parentId));
       }
       setNotice("Enregistré.");
@@ -221,11 +122,6 @@ export default function FormationBuilder() {
     } finally {
       setBusy(false);
     }
-  };
-
-  const refreshChapters = async () => {
-    const ch = await chapterServiceExtended.byFormation(id);
-    setChapters(Array.isArray(ch.data) ? ch.data : []);
   };
 
   const confirmDelete = async () => {
@@ -238,10 +134,10 @@ export default function FormationBuilder() {
         await refreshChapters();
       } else if (kind === "section") {
         await sectionServiceExtended.destroy(item.id_section);
-        await loadSections(item.id_chapitre ?? openChapter);
+        await loadSections(item.id_chapitre);
       } else if (kind === "sous") {
         await sousSectionServiceExtended.destroy(item.id_sous_section);
-        await loadSousSections(item.id_section ?? openSection);
+        await loadSousSections(item.id_section);
       }
       setNotice("Supprimé.");
       setDeleting(null);
@@ -253,26 +149,15 @@ export default function FormationBuilder() {
     }
   };
 
-  /* ---------------------------------------------------------------- */
-  /* Réordonnancement                                                  */
-  /* ---------------------------------------------------------------- */
-
   const moveChapter = async (index, dir) => {
     const next = [...chapters];
     const target = index + dir;
     if (target < 0 || target >= next.length) return;
     [next[index], next[target]] = [next[target], next[index]];
-    setChapters(next);
     try {
-      const updated = await chapterServiceExtended.reorder(
-        id,
-        next.map((c) => c.id_chapitre),
-      );
-      setChapters(updated.data || next);
-    } catch (err) {
-      setError(err);
-      await refreshChapters();
-    }
+      await chapterServiceExtended.reorder(id, next.map((c) => c.id_chapitre));
+      refreshChapters();
+    } catch (err) { setError(err); }
   };
 
   const moveSection = async (chapterId, index, dir) => {
@@ -281,17 +166,10 @@ export default function FormationBuilder() {
     const target = index + dir;
     if (target < 0 || target >= next.length) return;
     [next[index], next[target]] = [next[target], next[index]];
-    setSectionsByChapter((m) => ({ ...m, [chapterId]: next }));
     try {
-      const updated = await sectionServiceExtended.reorder(
-        chapterId,
-        next.map((s) => s.id_section),
-      );
-      setSectionsByChapter((m) => ({ ...m, [chapterId]: updated.data || next }));
-    } catch (err) {
-      setError(err);
-      await loadSections(chapterId).catch(() => {});
-    }
+      await sectionServiceExtended.reorder(chapterId, next.map((s) => s.id_section));
+      await loadSections(chapterId);
+    } catch (err) { setError(err); }
   };
 
   const moveSous = async (sectionId, index, dir) => {
@@ -300,294 +178,206 @@ export default function FormationBuilder() {
     const target = index + dir;
     if (target < 0 || target >= next.length) return;
     [next[index], next[target]] = [next[target], next[index]];
-    setSousBySection((m) => ({ ...m, [sectionId]: next }));
     try {
-      const updated = await sousSectionServiceExtended.reorder(
-        sectionId,
-        next.map((s) => s.id_sous_section),
-      );
-      setSousBySection((m) => ({ ...m, [sectionId]: updated.data || next }));
-    } catch (err) {
-      setError(err);
-      await loadSousSections(sectionId).catch(() => {});
-    }
+      await sousSectionServiceExtended.reorder(sectionId, next.map((s) => s.id_sous_section));
+      await loadSousSections(sectionId);
+    } catch (err) { setError(err); }
   };
 
-  if (loading) return <Spinner />;
+  const togglePublish = async () => {
+    setPublishBusy(true);
+    try {
+      if (formation.statut === "PUBLIEE") await formationServiceExtended.unpublish(id);
+      else await formationServiceExtended.publish(id);
+      await load();
+      setNotice(formation?.statut === "PUBLIEE" ? "Formation dépubliée." : "Formation publiée — visible dans le catalogue.");
+    } catch (err) { setError(err); }
+    finally { setPublishBusy(false); }
+  };
+
+  const saveFormation = async (e) => {
+    e.preventDefault();
+    setSavingFormation(true);
+    try {
+      await formationServiceExtended.update(id, {
+        titre: formationForm.titre,
+        description: formationForm.description,
+        id_categorie: formation.id_categorie,
+      });
+      setNotice("Informations mises à jour.");
+      await load();
+    } catch (err) { setError(err); }
+    finally { setSavingFormation(false); }
+  };
+
+  if (!formation) return <Spinner />;
 
   const publiee = formation?.statut === "PUBLIEE";
 
   return (
-    <div className="mx-auto max-w-5xl">
-      <Link to="/formateur/formations" className="text-sm font-medium text-brand-600 hover:underline">
-        ← Mes formations
-      </Link>
-      <PageHeader
-        title={formation?.titre || "Formation"}
-        subtitle={formation?.description}
-        actions={
-          <div className="flex items-center gap-2">
-            <Badge color={publiee ? "green" : "amber"}>{publiee ? "Publiée" : "Brouillon"}</Badge>
-            <button
-              type="button"
-              className={publiee ? "btn-secondary !py-2 !text-sm" : "btn-primary !py-2 !text-sm"}
-              disabled={publishBusy}
-              onClick={togglePublish}
-            >
-              {publishBusy ? "..." : publiee ? "Dépublier" : "Publier"}
+    <div className="space-y-6">
+      {error && <Alert type="error" title={getErrorMessage(error)} />}
+
+      {/* Formation info card */}
+      <Card className="overflow-hidden p-0">
+        <div className="gradient-brand p-4 text-white sm:px-6 sm:py-4">
+          <div className="flex items-center justify-between">
+            <h3 className="flex items-center gap-2 text-sm font-bold">
+              <Icons.formations className="h-4 w-4" /> Informations de la formation
+            </h3>
+            <div className="flex items-center gap-2">
+              <span className={`badge ${publiee ? "badge-success" : "badge-warning"}`}>
+                {publiee ? "Publiée" : "Brouillon"}
+              </span>
+            </div>
+          </div>
+        </div>
+        <form onSubmit={saveFormation} className="p-5 sm:p-6">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <label className="label">Titre</label>
+              <input className="input" value={formationForm.titre} onChange={(e) => setFormationForm({ ...formationForm, titre: e.target.value })} />
+              <FieldError error={formError} name="titre" />
+            </div>
+            <div>
+              <label className="label">Description</label>
+              <textarea className="input" rows={2} value={formationForm.description} onChange={(e) => setFormationForm({ ...formationForm, description: e.target.value })} />
+            </div>
+          </div>
+          <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-4">
+            <button type="submit" className="btn-secondary btn-sm" disabled={savingFormation}>
+              {savingFormation ? "..." : <><Icons.check className="h-3.5 w-3.5" /> Enregistrer</>}
+            </button>
+            <button type="button" className={`${publiee ? "btn-secondary" : "btn-primary"} btn-sm`} disabled={publishBusy} onClick={togglePublish}>
+              {publishBusy ? "..." : publiee ? <><Icons.eye className="h-3.5 w-3.5" /> Dépublier</> : <><Icons.check className="h-3.5 w-3.5" /> Publier</>}
             </button>
           </div>
-        }
-      />
-
-      {notice && <Alert type="success" className="mb-4" title={notice} />}
-      {error && <Alert type="error" className="mb-4" title={getErrorMessage(error)} />}
-
-      <Card className="mb-4 p-4">
-        <div className="mb-3 flex items-center gap-3">
-          <Icons.formations />
-          <p className="font-semibold text-slate-800">Informations de la formation</p>
-        </div>
-        <FormAlert error={formationError} />
-        <form id="formation-form" onSubmit={saveFormation} className="space-y-4">
-          <div>
-            <label className="label">Titre</label>
-            <input
-              className="input"
-              value={formationForm.titre}
-              onChange={(e) => setFormationForm({ ...formationForm, titre: e.target.value })}
-            />
-            <FieldError error={formationError} name="titre" />
-          </div>
-          <div>
-            <label className="label">Description</label>
-            <textarea
-              className="input"
-              rows={2}
-              value={formationForm.description}
-              onChange={(e) => setFormationForm({ ...formationForm, description: e.target.value })}
-            />
-          </div>
-          <button type="submit" className="btn-primary !py-2 !text-sm" disabled={savingFormation}>
-            {savingFormation ? "Enregistrement..." : "Enregistrer"}
-          </button>
         </form>
       </Card>
 
-      <Card className="mb-4 flex flex-wrap items-center justify-between gap-3 p-4">
-        <div className="flex items-center gap-3">
-          <Icons.modules />
-          <div>
-            <p className="font-semibold text-slate-800">Chapitres</p>
-            <p className="text-xs text-slate-500">Sections → Sous-sections (rich text) → Quiz</p>
-          </div>
+      {/* Chapters tree */}
+      <Card className="overflow-hidden p-0">
+        <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/50 px-5 py-3 sm:px-6">
+          <h3 className="flex items-center gap-2 text-sm font-bold text-slate-800">
+            <Icons.modules className="h-4 w-4 text-brand-600" /> Chapitres ({chapters.length})
+          </h3>
+          <button type="button" className="btn-primary btn-sm" onClick={() => openCreate("chapter")}>
+            <Icons.plus className="h-3.5 w-3.5" /> Chapitre
+          </button>
         </div>
-        <button type="button" className="btn-primary !py-2 !text-sm" onClick={() => openCreate("chapter")}>
-          <Icons.plus className="h-4 w-4" /> Ajouter un chapitre
-        </button>
-      </Card>
 
-      {chapters.length === 0 && (
-        <Card>
-          <p className="py-8 text-center text-sm text-slate-400">
-            Aucun chapitre. Ajoutez le premier chapitre de votre formation.
-          </p>
-        </Card>
-      )}
+        {chapters.length === 0 && (
+          <div className="p-8 text-center">
+            <div className="empty-icon mx-auto">
+              <Icons.book className="h-6 w-6" />
+            </div>
+            <p className="mt-3 text-sm text-slate-500">Aucun chapitre — ajoutez le premier</p>
+          </div>
+        )}
 
-      <div className="space-y-3">
-        {chapters.map((chapter, idx) => {
-          const sections = sectionsByChapter[chapter.id_chapitre] || [];
-          const open = openChapter === chapter.id_chapitre;
-          return (
-            <Card key={chapter.id_chapitre} className="overflow-hidden">
-              <div className="flex flex-wrap items-center justify-between gap-2 p-4">
-                <div className="flex min-w-0 items-center gap-3">
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-xs font-bold text-brand-700">
+        <div className="divide-y divide-slate-100">
+          {chapters.map((chapter, idx) => {
+            const sections = sectionsByChapter[chapter.id_chapitre] || [];
+            return (
+              <div key={chapter.id_chapitre}>
+                <div className="flex items-center gap-3 px-5 py-3 sm:px-6 hover:bg-slate-50/50 transition-base">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-brand-100 text-[11px] font-bold text-brand-700">
                     {idx + 1}
                   </span>
-                  <div className="min-w-0">
-                    <p className="truncate font-semibold text-slate-900">{chapter.titre}</p>
-                    {chapter.description && (
-                      <p className="truncate text-xs text-slate-400">{chapter.description}</p>
-                    )}
-                  </div>
+                  <span className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-800">{chapter.titre}</span>
+                  <span className="flex items-center gap-1">
+                    <ArrowBtn disabled={idx === 0} onClick={() => moveChapter(idx, -1)} up />
+                    <ArrowBtn disabled={idx === chapters.length - 1} onClick={() => moveChapter(idx, 1)} />
+                    <button type="button" className="btn-secondary btn-sm" onClick={() => openEdit("chapter", chapter)}>
+                      <Icons.edit className="h-3 w-3" />
+                    </button>
+                    <button type="button" className="btn-ghost btn-sm !text-danger-500 hover:!bg-danger-50" onClick={() => setDeleting({ kind: "chapter", item: chapter })}>
+                      <Icons.trash className="h-3 w-3" />
+                    </button>
+                  </span>
                 </div>
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <ArrowBtn disabled={idx === 0} onClick={() => moveChapter(idx, -1)} up />
-                  <ArrowBtn disabled={idx === chapters.length - 1} onClick={() => moveChapter(idx, 1)} />
-                  <Link
-                    to={`/formateur/quizzes?chapitre=${chapter.id_chapitre}`}
-                    className="btn-secondary !px-3 !py-1.5 !text-xs"
-                  >
-                    Quiz
-                  </Link>
-                  <button type="button" className="btn-secondary !px-3 !py-1.5 !text-xs" onClick={() => toggleChapter(chapter)}>
-                    {open ? "Réduire" : `Sections (${sections.length})`}
-                  </button>
-                  <button type="button" className="btn-secondary !px-3 !py-1.5 !text-xs" onClick={() => openEdit("chapter", chapter)}>
-                    Modifier
-                  </button>
-                  <button
-                    type="button"
-                    className="btn-ghost !px-2 !py-1 !text-xs text-red-600 hover:bg-red-50"
-                    onClick={() => setDeleting({ kind: "chapter", item: chapter })}
-                  >
-                    Supprimer
-                  </button>
-                </div>
-              </div>
 
-              {open && (
-                <div className="border-t border-slate-100 bg-slate-50/40 p-4">
-                  <div className="mb-3 space-y-2">
-                    {sections.length === 0 && (
-                      <p className="rounded-lg border border-dashed border-slate-200 px-4 py-5 text-center text-sm text-slate-400">
-                        Aucune section dans ce chapitre.
-                      </p>
-                    )}
-                    {sections.map((section, sIdx) => {
-                      const sous = sousBySection[section.id_section] || [];
-                      const secOpen = openSection === section.id_section;
-                      return (
-                        <div key={section.id_section} className="rounded-xl bg-white shadow-sm ring-1 ring-slate-100">
-                          <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5">
-                            <button
-                              type="button"
-                              onClick={() => toggleSection(section)}
-                              className="flex min-w-0 items-center gap-2 text-left"
-                            >
-                              <Icons.folder className="h-4 w-4 shrink-0 text-brand-500" />
-                              <span className="min-w-0">
-                                <span className="block truncate text-sm font-medium text-slate-800">
-                                  {section.titre}
-                                </span>
-                                {section.description && (
-                                  <span className="block truncate text-[11px] text-slate-400">
-                                    {section.description}
-                                  </span>
-                                )}
+                {sections.length > 0 && (
+                  <div className="border-t border-slate-50 bg-slate-50/30 px-5 py-2 sm:px-6">
+                    <ul className="space-y-1">
+                      {sections.map((section, sIdx) => {
+                        const sous = sousBySection[section.id_section] || [];
+                        return (
+                          <li key={section.id_section}>
+                            <div className="flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-white transition-base">
+                              <Icons.folder className="h-3.5 w-3.5 shrink-0 text-brand-500" />
+                              <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-slate-700">{section.titre}</span>
+                              <span className="flex items-center gap-1">
+                                <ArrowBtn small disabled={sIdx === 0} onClick={() => moveSection(chapter.id_chapitre, sIdx, -1)} up />
+                                <ArrowBtn small disabled={sIdx === sections.length - 1} onClick={() => moveSection(chapter.id_chapitre, sIdx, 1)} />
+                                <button type="button" className="btn-secondary !px-2 !py-0.5 !text-[10px]" onClick={() => openEdit("section", section, chapter.id_chapitre)}>
+                                  <Icons.edit className="h-3 w-3" />
+                                </button>
+                                <button type="button" className="btn-ghost !px-1 !py-0.5 !text-[10px] text-danger-500 hover:!bg-danger-50" onClick={() => setDeleting({ kind: "section", item: { ...section, id_chapitre: chapter.id_chapitre } })}>
+                                  <Icons.trash className="h-3 w-3" />
+                                </button>
                               </span>
-                            </button>
-                            <div className="flex flex-wrap items-center gap-1.5">
-                              <ArrowBtn small disabled={sIdx === 0} onClick={() => moveSection(chapter.id_chapitre, sIdx, -1)} up />
-                              <ArrowBtn small disabled={sIdx === sections.length - 1} onClick={() => moveSection(chapter.id_chapitre, sIdx, 1)} />
-                              <button type="button" className="btn-secondary !px-2.5 !py-1 !text-xs" onClick={() => toggleSection(section)}>
-                                {secOpen ? `Masquer (${sous.length})` : `Sous-sections (${sous.length})`}
-                              </button>
-                              <button
-                                type="button"
-                                className="btn-secondary !px-2.5 !py-1 !text-xs"
-                                onClick={() => openEdit("section", section, chapter.id_chapitre)}
-                              >
-                                Modifier
-                              </button>
-                              <button
-                                type="button"
-                                className="btn-ghost !px-2 !py-1 !text-xs text-red-600 hover:bg-red-50"
-                                onClick={() =>
-                                  setDeleting({ kind: "section", item: { ...section, id_chapitre: chapter.id_chapitre } })
-                                }
-                              >
-                                Supprimer
-                              </button>
                             </div>
-                          </div>
-
-                          {secOpen && (
-                            <div className="border-t border-slate-100 p-3">
-                              <ul className="mb-2 space-y-1.5">
-                                {sous.length === 0 && (
-                                  <li className="rounded-md bg-slate-50 px-3 py-3 text-center text-xs text-slate-400">
-                                    Aucune sous-section — ajoutez votre contenu pédagogique.
-                                  </li>
-                                )}
+                            {sous.length > 0 && (
+                              <ul className="ml-6 mt-0.5 space-y-0.5 border-l border-slate-100 pl-3">
                                 {sous.map((ss, ssIdx) => (
-                                  <li
-                                    key={ss.id_sous_section}
-                                    className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-slate-50 px-3 py-2"
-                                  >
-                                    <span className="flex min-w-0 items-center gap-2">
-                                      <Icons.file className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-                                      <span className="truncate text-sm text-slate-700">{ss.titre}</span>
-                                    </span>
-                                    <span className="flex items-center gap-1.5">
+                                  <li key={ss.id_sous_section} className="flex items-center gap-2 rounded-md px-2 py-1 text-[12px] hover:bg-white transition-base">
+                                    <Icons.file className="h-3 w-3 shrink-0 text-slate-400" />
+                                    <span className="min-w-0 flex-1 truncate text-slate-600">{ss.titre}</span>
+                                    <span className="flex items-center gap-1">
                                       <ArrowBtn small disabled={ssIdx === 0} onClick={() => moveSous(section.id_section, ssIdx, -1)} up />
                                       <ArrowBtn small disabled={ssIdx === sous.length - 1} onClick={() => moveSous(section.id_section, ssIdx, 1)} />
-                                      <button
-                                        type="button"
-                                        className="btn-secondary !px-2.5 !py-1 !text-xs"
-                                        onClick={() => openEdit("sous", ss, section.id_section)}
-                                      >
-                                        Éditer
+                                      <button type="button" className="btn-secondary !px-2 !py-0.5 !text-[10px]" onClick={() => openEdit("sous", ss, section.id_section)}>
+                                        <Icons.edit className="h-3 w-3" />
                                       </button>
-                                      <button
-                                        type="button"
-                                        className="btn-ghost !px-2 !py-1 !text-xs text-red-600 hover:bg-red-50"
-                                        onClick={() =>
-                                          setDeleting({ kind: "sous", item: { ...ss, id_section: section.id_section } })
-                                        }
-                                      >
-                                        Supprimer
+                                      <button type="button" className="btn-ghost !px-1 !py-0.5 !text-[10px] text-danger-500 hover:!bg-danger-50" onClick={() => setDeleting({ kind: "sous", item: { ...ss, id_section: section.id_section } })}>
+                                        <Icons.trash className="h-3 w-3" />
                                       </button>
                                     </span>
                                   </li>
                                 ))}
                               </ul>
-                              <button
-                                type="button"
-                                className="btn-primary !py-1.5 !text-xs"
-                                onClick={() => openCreate("sous", section.id_section)}
-                              >
-                                <Icons.plus className="h-3.5 w-3.5" /> Sous-section (rich text)
+                            )}
+                            <div className="ml-6 mt-0.5">
+                              <button type="button" className="btn-ghost !py-1 !text-[11px] text-brand-600" onClick={() => openCreate("sous", section.id_section)}>
+                                <Icons.plus className="h-3 w-3" /> Sous-section
                               </button>
                             </div>
-                          )}
-                        </div>
-                      );
-                    })}
+                          </li>
+                        );
+                      })}
+                    </ul>
                   </div>
+                )}
 
-                  <button
-                    type="button"
-                    className="btn-secondary !py-1.5 !text-xs"
-                    onClick={() => openCreate("section", chapter.id_chapitre)}
-                  >
-                    <Icons.plus className="h-3.5 w-3.5" /> Ajouter une section
+                <div className="border-t border-slate-50 px-5 py-2 sm:px-6">
+                  <button type="button" className="btn-ghost !py-1 !text-[11px] text-brand-600" onClick={() => openCreate("section", chapter.id_chapitre)}>
+                    <Icons.plus className="h-3 w-3" /> Section
                   </button>
                 </div>
-              )}
-            </Card>
-          );
-        })}
-      </div>
+              </div>
+            );
+          })}
+        </div>
+      </Card>
 
+      {/* CRUD Modal */}
       <Modal
         open={Boolean(modal)}
         onClose={() => setModal(null)}
         title={
           modal?.kind === "chapter"
-            ? modal.item
-              ? "Modifier le chapitre"
-              : "Nouveau chapitre"
+            ? modal.item ? "Modifier le chapitre" : "Nouveau chapitre"
             : modal?.kind === "section"
-              ? modal.item
-                ? "Modifier la section"
-                : "Nouvelle section"
-              : modal?.item
-                ? "Éditer la sous-section"
-                : "Nouvelle sous-section"
+              ? modal.item ? "Modifier la section" : "Nouvelle section"
+              : modal?.item ? "Éditer la sous-section" : "Nouvelle sous-section"
         }
-        size={modal?.kind === "sous" ? "xl" : undefined}
-        footer={
-          <button type="submit" form="builder-form" className="btn-primary" disabled={busy}>
-            {busy ? "Enregistrement..." : "Enregistrer"}
-          </button>
-        }
+        size={modal?.kind === "sous" || modal?.kind === "section" ? "xl" : undefined}
+        footer={<button type="submit" form="builder-form" className="btn-primary" disabled={busy}>{busy ? "Enregistrement..." : "Enregistrer"}</button>}
       >
         <FormAlert error={formError} />
         <form id="builder-form" onSubmit={save} className="space-y-4">
-          {modal?.kind !== "sous" && (
+          {modal?.kind === "chapter" && (
             <>
               <div>
                 <label className="label">Titre</label>
@@ -596,17 +386,11 @@ export default function FormationBuilder() {
               </div>
               <div>
                 <label className="label">Description (optionnelle)</label>
-                <textarea
-                  className="input"
-                  rows={2}
-                  value={form.description}
-                  onChange={(e) => setForm({ ...form, description: e.target.value })}
-                />
+                <textarea className="input" rows={2} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
               </div>
             </>
           )}
-
-          {modal?.kind === "sous" && (
+          {(modal?.kind === "sous" || modal?.kind === "section") && (
             <>
               <div>
                 <label className="label">Titre</label>
@@ -614,11 +398,20 @@ export default function FormationBuilder() {
                 <FieldError error={formError} name="titre" />
               </div>
               <div>
-                <label className="label">Contenu pédagogique</label>
-                <RichTextEditor value={form.contenu || ""} onChange={(html) => setForm((f) => ({ ...f, contenu: html }))} />
-                <p className="mt-1 text-xs text-slate-400">
-                  Titres, listes, citations, liens et images (par URL). Limite : 2 000 000 caractères.
-                </p>
+                <div className="mb-1.5 flex items-center justify-between">
+                  <label className="label !mb-0">Contenu pédagogique</label>
+                  <button type="button" className={`rounded-lg px-3 py-1 text-xs font-semibold transition-base ${previewMode ? "bg-brand-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`} onClick={() => setPreviewMode((p) => !p)}>
+                    {previewMode ? "Éditer" : "Aperçu"}
+                  </button>
+                </div>
+                {previewMode ? (
+                  <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-soft min-h-[200px]">
+                    {form.contenu ? <RichTextRenderer html={form.contenu} /> : <p className="py-6 text-center text-sm text-slate-300">Rien à prévisualiser.</p>}
+                  </div>
+                ) : (
+                  <RichTextEditor value={form.contenu || ""} onChange={(html) => setForm((f) => ({ ...f, contenu: html }))} />
+                )}
+                <p className="mt-1 text-[11px] text-slate-400">Titres, listes, citations, liens, images, vidéo, documents. Limite : {MAX_CONTENU.toLocaleString()} caractères.</p>
               </div>
             </>
           )}
@@ -630,14 +423,8 @@ export default function FormationBuilder() {
         onClose={() => setDeleting(null)}
         onConfirm={confirmDelete}
         busy={busy}
-        title={
-          deleting?.kind === "chapter"
-            ? "Supprimer ce chapitre ?"
-            : deleting?.kind === "section"
-              ? "Supprimer cette section ?"
-              : "Supprimer cette sous-section ?"
-        }
-        message="Les éléments enfants éventuels seront également supprimés."
+        title={deleting?.kind === "chapter" ? "Supprimer ce chapitre ?" : deleting?.kind === "section" ? "Supprimer cette section ?" : "Supprimer cette sous-section ?"}
+        message="Les éléments enfants seront également supprimés."
       />
     </div>
   );
@@ -645,13 +432,8 @@ export default function FormationBuilder() {
 
 function ArrowBtn({ small, up, disabled, onClick }) {
   return (
-    <button
-      type="button"
-      disabled={disabled}
-      onClick={onClick}
-      title={up ? "Monter" : "Descendre"}
-      className={`btn-secondary ${small ? "!px-1.5 !py-0.5 !text-[10px]" : "!px-2 !py-1 !text-xs"} disabled:opacity-30`}
-    >
+    <button type="button" disabled={disabled} onClick={onClick} title={up ? "Monter" : "Descendre"}
+      className={`rounded-lg border border-slate-200 bg-white text-slate-500 transition-base hover:bg-slate-50 hover:text-slate-700 disabled:opacity-30 disabled:cursor-not-allowed ${small ? "p-0.5 text-[9px]" : "p-1 text-[10px]"}`}>
       {up ? "↑" : "↓"}
     </button>
   );

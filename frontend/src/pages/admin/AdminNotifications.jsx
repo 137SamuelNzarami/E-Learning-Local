@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import PageHeader from "../../components/ui/PageHeader";
 import Card from "../../components/ui/Card";
 import Spinner from "../../components/ui/Spinner";
 import Modal from "../../components/ui/Modal";
@@ -13,6 +12,7 @@ import { notificationService } from "../../services/notificationService";
 import { userService } from "../../services/userService";
 import { usePagination } from "../../hooks/useApi";
 import { Icons } from "../../components/Icons";
+import { formatDateTime } from "../../utils/format";
 
 export default function AdminNotifications() {
   const [notifications, setNotifications] = useState([]);
@@ -89,45 +89,60 @@ export default function AdminNotifications() {
   );
 
   return (
-    <div>
-      <PageHeader
-        title="Notifications"
-        subtitle="Envoyez des notifications aux utilisateurs"
-        actions={<button type="button" className="btn-primary" onClick={openCreate}><Icons.plus className="h-4 w-4" /> Nouvelle notification</button>}
-      />
+    <div className="space-y-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="page-title">Notifications</h1>
+          <p className="page-subtitle">Envoyez des notifications aux utilisateurs</p>
+        </div>
+        <button type="button" className="btn-primary" onClick={openCreate}>
+          <Icons.plus className="h-4 w-4" /> Nouvelle notification
+        </button>
+      </div>
 
-      {notice && <Alert type="success" className="mb-4" title={notice} />}
-      {error && <Alert type="error" className="mb-4" title={error.message} />}
+      {notice && (
+        <div className="animate-slide-up rounded-xl border border-success-200 bg-success-50 p-3 text-sm font-medium text-success-700">
+          {notice}
+        </div>
+      )}
+      {error && <Alert type="error" title={error.message} />}
 
-      <Card>
+      <Card className="p-0 overflow-hidden">
         {loading ? (
-          <Spinner />
+          <div className="p-8"><Spinner /></div>
         ) : notifications.length === 0 ? (
-          <EmptyState title="Aucune notification" />
+          <div className="p-8">
+            <EmptyState
+              title="Aucune notification"
+              message="Les notifications envoyées apparaîtront ici."
+              action={<button type="button" className="btn-primary" onClick={openCreate}>Nouvelle notification</button>}
+            />
+          </div>
         ) : (
           <>
             <ul className="divide-y divide-slate-100">
               {pageItems.map((n) => (
-                <li key={n.id_notification} className="flex items-start gap-4 py-4">
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-600">
-                    <Icons.notifications />
-                  </span>
+                <li key={n.id_notification} className="flex items-start gap-4 px-5 py-4 transition-base hover:bg-slate-50/50">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600">
+                    <Icons.notifications className="h-5 w-5" />
+                  </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <p className="font-medium text-slate-900">{n.titre}</p>
+                      <p className="text-sm font-semibold text-slate-800">{n.titre}</p>
                       {n.lu === 0 ? <Badge tone="warning">Non lue</Badge> : <Badge tone="success">Lue</Badge>}
                     </div>
-                    <p className="mt-1 text-sm text-slate-600">{n.contenu}</p>
-                    <p className="mt-1 text-xs text-slate-400">
-                      Destinataire : {n.prenom} {n.nom}
+                    <p className="mt-1 text-sm leading-relaxed text-slate-600">{n.contenu}</p>
+                    <p className="mt-1.5 text-[11px] text-slate-400">
+                      Destinataire : <span className="font-medium text-slate-600">{n.prenom} {n.nom}</span>
+                      {n.date_envoi && <span> · {formatDateTime(n.date_envoi)}</span>}
                     </p>
                   </div>
                   <button
                     type="button"
-                    className="btn-ghost !px-3 !py-1.5 !text-xs text-red-600 hover:bg-red-50"
+                    className="btn-ghost btn-sm !text-danger-500 hover:!bg-danger-50"
                     onClick={() => setDeleting(n)}
                   >
-                    Supprimer
+                    <Icons.trash className="h-3 w-3" />
                   </button>
                 </li>
               ))}
@@ -152,7 +167,7 @@ export default function AdminNotifications() {
         title="Nouvelle notification"
         footer={
           <button type="submit" form="notification-form" className="btn-primary" disabled={busy}>
-            {busy ? "Envoi..." : "Envoyer"}
+            {busy ? "Envoi..." : <><Icons.send className="h-4 w-4" /> Envoyer</>}
           </button>
         }
       >
@@ -160,8 +175,8 @@ export default function AdminNotifications() {
         <form id="notification-form" onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="label">Destinataire</label>
-            <select className="input" value={form.id_utilisateur} onChange={update("id_utilisateur")}>
-              <option value="">Choisir...</option>
+            <select className="select" value={form.id_utilisateur} onChange={update("id_utilisateur")}>
+              <option value="">Choisir un utilisateur...</option>
               {users.map((u) => (
                 <option key={u.id_utilisateur} value={u.id_utilisateur}>
                   {u.prenom} {u.nom} ({u.role})
@@ -172,12 +187,12 @@ export default function AdminNotifications() {
           </div>
           <div>
             <label className="label">Titre</label>
-            <input className="input" value={form.titre} onChange={update("titre")} />
+            <input className="input" value={form.titre} onChange={update("titre")} placeholder="Titre de la notification" />
             <FieldError error={formError} name="titre" />
           </div>
           <div>
             <label className="label">Contenu</label>
-            <textarea className="input" rows={3} value={form.contenu} onChange={update("contenu")} />
+            <textarea className="input" rows={4} value={form.contenu} onChange={update("contenu")} placeholder="Message à envoyer..." />
             <FieldError error={formError} name="contenu" />
           </div>
         </form>
@@ -189,6 +204,7 @@ export default function AdminNotifications() {
         onConfirm={confirmDelete}
         busy={busy}
         title="Supprimer cette notification ?"
+        message="Cette notification sera définitivement supprimée."
       />
     </div>
   );

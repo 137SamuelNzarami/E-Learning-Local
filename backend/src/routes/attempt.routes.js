@@ -70,7 +70,7 @@ router.post(
 /**
  * Soumettre une tentative EN_COURS
  *
- * Body : { reponses: [ { id_question, id_reponses } | { id_question, contenu } ] }
+ * Body : { reponses: [ { id_question, id_reponses } ] }   // QCM uniquement
  */
 router.post(
   "/:id/submit",
@@ -95,18 +95,5 @@ router.get(
  * Une tentative (détail + réponses étudiant)
  */
 router.get("/:id", authMiddleware, AttemptController.show);
-
-/**
- * Correction manuelle des réponses libres
- *
- * Formateur propriétaire du quiz / admin.
- * Body : { notes: [ { id_reponse_etudiant, note } ] }
- */
-router.patch(
-  "/:id/corriger",
-  authMiddleware,
-  roleMiddleware(ROLES.FORMATEUR, ROLES.ADMIN),
-  AttemptController.corriger,
-);
 
 export default router;

@@ -7,11 +7,13 @@ import client from "../api/client";
  * - GET   /                          (admin uniquement)
  * - GET   /user/:id_utilisateur      (étudiant : soi-même ; admin : tous)
  * - POST  /quiz/:id_quiz/start       (étudiant) → { tentative, score_reussite, questions[] }
- * - POST  /:id/submit                (étudiant) { reponses: [...] } → { statut, note, a_corriger, message }
+ * - POST  /:id/submit                (étudiant) { reponses: [...] } → { statut, note, message }
  * - GET   /quiz/:id_quiz/mine        (étudiant) → historique + peut_passer
  * - GET   /quiz/:id_quiz/attempts    (scopé : étudiant=siennes, formateur=ses étudiants, admin=tout)
  * - GET   /:id                       (propriétaire ou admin)
- * - PATCH /:id/corriger              (formateur propriétaire / admin) { notes: [...] }
+ *
+ * Seuls les QCM existent : la note est toujours calculée et la correction
+ * est automatique côté serveur (le type LIBRE a été retiré du produit).
  *
  * AUCUNE création/modification/suppression générique n'existe côté backend.
  */
@@ -43,17 +45,9 @@ export const attemptServiceExtended = {
    * Soumettre une tentative EN_COURS.
    * payload.reponses = [
    *   { id_question, id_reponses: [10, 11] },  // QCM (ensemble exact)
-   *   { id_question, contenu: "texte" },       // LIBRE
    * ]
    * La NOTE est toujours calculée par le backend.
    */
   submit: (idTentative, payload) =>
     client.post(`/attempts/${idTentative}/submit`, payload),
-
-  /**
-   * Correction manuelle des questions LIBRE (formateur propriétaire).
-   * payload.notes = [{ id_reponse_etudiant, note }]
-   */
-  corriger: (idTentative, payload) =>
-    client.patch(`/attempts/${idTentative}/corriger`, payload),
 };

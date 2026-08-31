@@ -18,6 +18,27 @@ import {
   ValidationError,
 } from "../utils/app-errors.js";
 
+/**
+ * Enrichit les lignes brutes d'une formation avec deux champs d'affichage :
+ * - categorie : nom lisible de la catégorie ;
+ * - formateur : « Prénom Nom » du formateur propriétaire.
+ * Les champs bruts (id_categorie, nom_categorie, prenom, nom) sont conservés.
+ */
+function decorate(formation) {
+  if (!formation) return formation;
+
+  const prenom = formation.prenom ?? "";
+  const nom = formation.nom ?? "";
+
+  return {
+    ...formation,
+    ...(formation.nom_categorie !== undefined
+      ? { categorie: formation.nom_categorie }
+      : {}),
+    formateur: `${prenom} ${nom}`.trim(),
+  };
+}
+
 class FormationService {
   /**
    * Catalogue :
@@ -28,19 +49,21 @@ class FormationService {
   async getAllFormations(user) {
     const rows = await FormationRepository.findAll();
 
-    if (!user || isEtudiant(user)) {
-      return rows.filter((f) => f.statut === "PUBLIEE");
-    }
+    let result;
 
-    if (isFormateur(user)) {
-      return rows.filter(
+    if (!user || isEtudiant(user)) {
+      result = rows.filter((f) => f.statut === "PUBLIEE");
+    } else if (isFormateur(user)) {
+      result = rows.filter(
         (f) =>
           f.statut === "PUBLIEE" ||
           Number(f.id_formateur) === Number(user.id),
       );
+    } else {
+      result = rows;
     }
 
-    return rows;
+    return result.map(decorate);
   }
 
   /**
@@ -63,7 +86,7 @@ class FormationService {
       throw new NotFoundError("Formation introuvable.");
     }
 
-    return formation;
+    return decorate(formation);
   }
 
   /**

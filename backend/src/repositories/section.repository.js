@@ -11,6 +11,7 @@ class SectionRepository {
                 s.id_chapitre,
                 s.titre,
                 s.description,
+                s.contenu,
                 s.ordre,
                 c.titre AS chapitre,
                 c.id_formation
@@ -32,6 +33,7 @@ class SectionRepository {
                 s.id_chapitre,
                 s.titre,
                 s.description,
+                s.contenu,
                 s.ordre,
                 c.titre AS chapitre,
                 c.id_formation
@@ -55,6 +57,7 @@ class SectionRepository {
                 id_chapitre,
                 titre,
                 description,
+                contenu,
                 ordre
             FROM sections
             WHERE id_chapitre = ?
@@ -85,14 +88,16 @@ class SectionRepository {
                 id_chapitre,
                 titre,
                 description,
+                contenu,
                 ordre
             )
-            VALUES (?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?)
             `,
       [
         data.id_chapitre,
         data.titre ?? null,
         data.description ?? null,
+        data.contenu ?? null,
         data.ordre ?? null,
       ],
     );
@@ -112,6 +117,10 @@ class SectionRepository {
     if (data.description !== undefined) {
       sets.push("description = ?");
       values.push(data.description);
+    }
+    if (data.contenu !== undefined) {
+      sets.push("contenu = ?");
+      values.push(data.contenu);
     }
     if (data.ordre !== undefined) {
       sets.push("ordre = ?");
@@ -153,6 +162,26 @@ class SectionRepository {
     } finally {
       conn.release();
     }
+  }
+  /**
+   * Retrouver la formation qui référence un fichier uploadé
+   * dans le contenu rich text d'une SECTION.
+   * (pendant de `SousSectionRepository.findFormationIdByFileChemin`)
+   */
+  async findFormationIdByFileChemin(chemin) {
+    const [rows] = await pool.query(
+      `
+            SELECT c.id_formation
+            FROM sections s
+            INNER JOIN chapitres c
+                ON s.id_chapitre = c.id_chapitre
+            WHERE s.contenu LIKE ?
+            ORDER BY s.id_section ASC
+            LIMIT 1
+            `,
+      [`%${chemin}%`],
+    );
+    return rows[0] || null;
   }
   /**
    * Supprimer une section (les sous-sections partent en CASCADE)

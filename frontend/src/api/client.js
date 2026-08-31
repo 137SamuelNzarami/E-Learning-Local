@@ -2,6 +2,8 @@ import axios from "axios";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3010/api";
 
+export { API_URL };
+
 export const TOKEN_KEY = "eul_token";
 export const USER_KEY = "eul_user";
 

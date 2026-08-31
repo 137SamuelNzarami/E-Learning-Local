@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
-import PageHeader from "../../components/ui/PageHeader";
 import Card from "../../components/ui/Card";
 import Spinner from "../../components/ui/Spinner";
 import EmptyState from "../../components/ui/EmptyState";
@@ -33,8 +32,11 @@ export default function MessagingPage() {
   };
 
   return (
-    <div className="mx-auto max-w-3xl">
-      <PageHeader title="Messagerie" subtitle="Vos conversations" />
+    <div className="mx-auto max-w-3xl space-y-6">
+      <div>
+        <h1 className="page-title">Messagerie</h1>
+        <p className="page-subtitle">Vos conversations</p>
+      </div>
 
       {loading ? (
         <Spinner />
@@ -50,15 +52,15 @@ export default function MessagingPage() {
         <div className="space-y-3">
           {conversations.map((c) => (
             <Link key={c.id_participant} to={`/messagerie/conversation/${c.id_conversation}`}>
-              <Card className="flex items-center gap-4 p-4 transition hover:border-brand-300 hover:shadow-lift">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-100 text-brand-600">
-                  <Icons.messages />
-                </span>
+              <Card className="flex items-center gap-4 p-4 transition-base hover:border-brand-300 hover:shadow-lift">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600">
+                  <Icons.messages className="h-5 w-5" />
+                </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-semibold text-slate-800">
+                  <p className="truncate text-sm font-semibold text-slate-800">
                     {getConversationTitle(c)}
                   </p>
-                  <p className="text-xs text-slate-500">Discussion privée</p>
+                  <p className="text-[11px] text-slate-400">Discussion privée</p>
                 </div>
                 <Icons.chevronRight className="h-4 w-4 text-slate-400" />
               </Card>

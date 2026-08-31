@@ -1,0 +1,645 @@
+{
+  "ADMIN-DASHBOARD": {
+    "url": "http://localhost:5180/dashboard",
+    "title": "E-Learning Universitaire Locale",
+    "allLinks": [
+      {
+        "href": "/dashboard",
+        "text": "E-Learning\n\nUniversitaire Local"
+      },
+      {
+        "href": "/etudiant/catalogue",
+        "text": "Catalogue"
+      },
+      {
+        "href": "/etudiant/parcours",
+        "text": "Mon parcours"
+      },
+      {
+        "href": "/etudiant/tentatives",
+        "text": "Résultats"
+      },
+      {
+        "href": "/notifications",
+        "text": ""
+      },
+      {
+        "href": "/admin/users",
+        "text": "Utilisateurs"
+      },
+      {
+        "href": "/admin/formations",
+        "text": "Formations"
+      },
+      {
+        "href": "/admin/categories",
+        "text": "Catégories"
+      },
+      {
+        "href": "/admin/reviews",
+        "text": "Avis"
+      },
+      {
+        "href": "/admin/progressions",
+        "text": "Progressions"
+      },
+      {
+        "href": "/admin/notifications",
+        "text": "Notifications"
+      },
+      {
+        "href": "/dashboard",
+        "text": "E-Learning\n\nUniversitaire Local"
+      },
+      {
+        "href": "/dashboard",
+        "text": "Tableau de bord"
+      },
+      {
+        "href": "/etudiant/catalogue",
+        "text": "Catalogue"
+      },
+      {
+        "href": "/etudiant/parcours",
+        "text": "Mon parcours"
+      },
+      {
+        "href": "/messagerie",
+        "text": "Messagerie"
+      },
+      {
+        "href": "/profile",
+        "text": "Mon profil"
+      },
+      {
+        "href": "/notifications",
+        "text": "Notifications"
+      }
+    ],
+    "hasSidebar": true,
+    "hasHeader": true,
+    "hasFooter": true,
+    "mainText": "Tableau de bord\n\nVue d'ensemble de la plateforme\n\nUtilisateurs\n\n7\n\nFormations publiées\n\n3/5\n\nCatégories\n\n4\n\nNote moyenne\n\n4.5\n\nInscriptions\n\n6\n\nAdministrateurs\n\n3\n\nFormateurs\n\n2\n\nÉtudiants\n\n2\n\nAccès rapides\nUtilisateurs\nFormations\nCatégories\nAvis\nProgressions\nNotifications\nDerniers avis\nalice.mbogho@tutore.local\n4\ngrace.wayire@tutore.local\n5\nalice.mbogho@tutore.local\n4\ngrace.wayire@tutore.local\n5",
+    "bodyClasses": "",
+    "bodyText": "E-Learning\n\nUniversitaire Local\n\nCatalogue\nMon parcours\nRésultats\nSN\n\nSamuel\n\nAdministrateur\n\nTableau de bord\n\nVue d'ensemble de la plateforme\n\nUtilisateurs\n\n7\n\nFormations publiées\n\n3/5\n\nCatégories\n\n4\n\nNote moyenne\n\n4.5\n\nInscriptions\n\n6\n\nAdministrateurs\n\n3\n\nFormateurs\n\n2\n\nÉtudiants\n\n2\n\nAccès rapides\nUtilisateurs\nFormations\nCatégories\nAvis\nProgressions\nNotifications\nDerniers avis\nalice.mbogho@tutore.local\n4\ngrace.wayire@tutore.local\n5\nalice.mbogho@tutore.local\n4\ngrace.wayire@tutore.local\n5\n\nE-Learning\n\nUniversitaire Local\n\nPlateforme d'apprentissage universitaire. Construisez votre parcours, partagez vos connaissances, progressez à votre rythme.\n\nNAVIGATION\nTableau de bord\nCatalogue\nMon parcours\nMessagerie\nRESSOURCES\nMon profil\nNotifications\nAide (bientôt)\nCONTACT\nsupport@eulocal.edu\nUniversité Local\n\n© 2026 E-Learning Universitaire. Tous droits réservés.\n\nFait avec passion pour l'éducation"
+  },
+  "ADMIN-USERS": {
+    "url": "http://localhost:5180/admin/users",
+    "title": "E-Learning Universitaire Locale",
+    "allLinks": [
+      {
+        "href": "/admin/dashboard",
+        "text": "Tableau de bord"
+      },
+      {
+        "href": "/admin/users",
+        "text": "Utilisateurs"
+      },
+      {
+        "href": "/admin/formations",
+        "text": "Formations"
+      },
+      {
+        "href": "/admin/categories",
+        "text": "Catégories"
+      },
+      {
+        "href": "/admin/reviews",
+        "text": "Avis"
+      },
+      {
+        "href": "/admin/progressions",
+        "text": "Progressions"
+      },
+      {
+        "href": "/admin/notifications",
+        "text": "Notifications"
+      },
+      {
+        "href": "/admin/conversations",
+        "text": "Conversations"
+      },
+      {
+        "href": "/notifications",
+        "text": ""
+      },
+      {
+        "href": "/profile",
+        "text": "SN\nSamuel"
+      }
+    ],
+    "hasSidebar": true,
+    "hasHeader": true,
+    "hasFooter": false,
+    "mainText": "Utilisateurs\n\nGérez les comptes de la plateforme\n\nNouvel utilisateur\n\nTotal\n\n7\n\nFormateurs\n\n2\n\nÉtudiants\n\n2\n\nSN\n\nSamuel Nzarami\n\nsamuel.nzarami@tutore.local\n\nAdministrateur\nModifier\nJK\n\nJosué Kayisavirwa\n\njosue.kayisavirwa@tutore.local\n\nAdministrateur\nModifier\nBK\n\nBenedicte Katsuva\n\nbenedicte.katsuva@tutore.local\n\nAdministrateur\nModifier\nJP\n\nJean Paul Paul\n\njean.paul@tutore.local\n\nFormateur\nModifier\nDB\n\nDavid Basinde\n\ndavid.basinde@tutore.local\n\nFormateur\nModifier\nGW\n\nGrâce Wayire\n\ngrace.wayire@tutore.local\n\nEtudiant\nModifier\nAM\n\nAlice Mbogho\n\nalice.mbogho@tutore.local\n\nEtudiant\nModifier",
+    "bodyClasses": "",
+    "bodyText": "Administration\n\nE-Learning Universitaire\n\nTableau de bord\nUtilisateurs\nFormations\nCatégories\nAvis\nProgressions\nNotifications\nConversations\nSN\n\nSamuel Nzarami\n\nAdministrateur\n\nSe déconnecter\nAdministration\n\nGestion de la plateforme\n\nSN\nSamuel\nUtilisateurs\n\nGérez les comptes de la plateforme\n\nNouvel utilisateur\n\nTotal\n\n7\n\nFormateurs\n\n2\n\nÉtudiants\n\n2\n\nSN\n\nSamuel Nzarami\n\nsamuel.nzarami@tutore.local\n\nAdministrateur\nModifier\nJK\n\nJosué Kayisavirwa\n\njosue.kayisavirwa@tutore.local\n\nAdministrateur\nModifier\nBK\n\nBenedicte Katsuva\n\nbenedicte.katsuva@tutore.local\n\nAdministrateur\nModifier\nJP\n\nJean Paul Paul\n\njean.paul@tutore.local\n\nFormateur\nModifier\nDB\n\nDavid Basinde\n\ndavid.basinde@tutore.local\n\nFormateur\nModifier\nGW\n\nGrâce Wayire\n\ngrace.wayire@tutore.local\n\nEtudiant\nModifier\nAM\n\nAlice Mbogho\n\nalice.mbogho@tutore.local\n\nEtudiant\nModifier"
+  },
+  "ADMIN-FORMATIONS": {
+    "url": "http://localhost:5180/admin/formations",
+    "title": "E-Learning Universitaire Locale",
+    "allLinks": [
+      {
+        "href": "/admin/dashboard",
+        "text": "Tableau de bord"
+      },
+      {
+        "href": "/admin/users",
+        "text": "Utilisateurs"
+      },
+      {
+        "href": "/admin/formations",
+        "text": "Formations"
+      },
+      {
+        "href": "/admin/categories",
+        "text": "Catégories"
+      },
+      {
+        "href": "/admin/reviews",
+        "text": "Avis"
+      },
+      {
+        "href": "/admin/progressions",
+        "text": "Progressions"
+      },
+      {
+        "href": "/admin/notifications",
+        "text": "Notifications"
+      },
+      {
+        "href": "/admin/conversations",
+        "text": "Conversations"
+      },
+      {
+        "href": "/notifications",
+        "text": ""
+      },
+      {
+        "href": "/profile",
+        "text": "SN\nSamuel"
+      }
+    ],
+    "hasSidebar": true,
+    "hasHeader": true,
+    "hasFooter": false,
+    "mainText": "Formations\n\nToutes les formations de la plateforme\n\nNouvelle formation\n\nTotal\n\n5\n\nPubliées\n\n3\n\nBrouillons\n\n2\n\n#\tTITRE\tCATÉGORIE\tFORMATEUR\tSTATUT\tACTIONS\n#5\tALGO 2\tDéveloppement Web\tJean Paul Paul\tBrouillon\t\nModifier\n\n#4\tIntroduction aux outils numériques\tOutils numériques\tDavid Basinde\tBrouillon\t\nModifier\n\n#3\tBases de données SQL\tBases de données\tDavid Basinde\tPubliée\t\nModifier\n\n#2\tJavaScript pour débutants\tProgrammation\tJean Paul Paul\tPubliée\t\nModifier\n\n#1\tDéveloppement Web Moderne\tDéveloppement Web\tJean Paul Paul\tPubliée\t\nModifier\n5 résultats\n5 / page\n10 / page\n25 / page\n50 / page\nPrécédent\n1\nSuivant",
+    "bodyClasses": "",
+    "bodyText": "Administration\n\nE-Learning Universitaire\n\nTableau de bord\nUtilisateurs\nFormations\nCatégories\nAvis\nProgressions\nNotifications\nConversations\nSN\n\nSamuel Nzarami\n\nAdministrateur\n\nSe déconnecter\nAdministration\n\nGestion de la plateforme\n\nSN\nSamuel\nFormations\n\nToutes les formations de la plateforme\n\nNouvelle formation\n\nTotal\n\n5\n\nPubliées\n\n3\n\nBrouillons\n\n2\n\n#\tTITRE\tCATÉGORIE\tFORMATEUR\tSTATUT\tACTIONS\n#5\tALGO 2\tDéveloppement Web\tJean Paul Paul\tBrouillon\t\nModifier\n\n#4\tIntroduction aux outils numériques\tOutils numériques\tDavid Basinde\tBrouillon\t\nModifier\n\n#3\tBases de données SQL\tBases de données\tDavid Basinde\tPubliée\t\nModifier\n\n#2\tJavaScript pour débutants\tProgrammation\tJean Paul Paul\tPubliée\t\nModifier\n\n#1\tDéveloppement Web Moderne\tDéveloppement Web\tJean Paul Paul\tPubliée\t\nModifier\n5 résultats\n5 / page\n10 / page\n25 / page\n50 / page\nPrécédent\n1\nSuivant"
+  },
+  "FORMATEUR-DASHBOARD": {
+    "url": "http://localhost:5180/dashboard",
+    "title": "E-Learning Universitaire Locale",
+    "allLinks": [
+      {
+        "href": "/dashboard",
+        "text": "E-Learning\n\nUniversitaire Local"
+      },
+      {
+        "href": "/formateur/formations",
+        "text": "Mes formations"
+      },
+      {
+        "href": "/formateur/quizzes",
+        "text": "Quiz"
+      },
+      {
+        "href": "/formateur/corrections",
+        "text": "Corrections"
+      },
+      {
+        "href": "/notifications",
+        "text": "5"
+      },
+      {
+        "href": "/formateur/formations",
+        "text": "Mes formations"
+      },
+      {
+        "href": "/formateur/corrections",
+        "text": "1 à corriger"
+      },
+      {
+        "href": "/formateur/corrections",
+        "text": "Corriger"
+      },
+      {
+        "href": "/formateur/formations",
+        "text": "Voir tout →"
+      },
+      {
+        "href": "/formateur/formations/5",
+        "text": "ALGO 2\n\nla suite d'algorthmiques\n\nBrouillon"
+      },
+      {
+        "href": "/formateur/formations/2",
+        "text": "JavaScript pour débutants\n\nDécouvrir les variables"
+      },
+      {
+        "href": "/formateur/formations/1",
+        "text": "Développement Web Moderne\n\nApprendre les fondament"
+      },
+      {
+        "href": "/formateur/formations",
+        "text": "Mes formations & publications"
+      },
+      {
+        "href": "/formateur/quizzes",
+        "text": "Quiz des chapitres"
+      },
+      {
+        "href": "/formateur/corrections",
+        "text": "Corrections en attente"
+      },
+      {
+        "href": "/messagerie",
+        "text": "Messagerie"
+      },
+      {
+        "href": "/dashboard",
+        "text": "E-Learning\n\nUniversitaire Local"
+      },
+      {
+        "href": "/dashboard",
+        "text": "Tableau de bord"
+      },
+      {
+        "href": "/etudiant/catalogue",
+        "text": "Catalogue"
+      },
+      {
+        "href": "/etudiant/parcours",
+        "text": "Mon parcours"
+      },
+      {
+        "href": "/messagerie",
+        "text": "Messagerie"
+      },
+      {
+        "href": "/profile",
+        "text": "Mon profil"
+      },
+      {
+        "href": "/notifications",
+        "text": "Notifications"
+      }
+    ],
+    "hasSidebar": true,
+    "hasHeader": true,
+    "hasFooter": true,
+    "mainText": "Espace formateur\n\nGérez vos formations et suivez les progrès de vos étudiants\n\nMes formations\n1 à corriger\n\nMes formations\n\n3\n\nPubliées\n\n2\n\nBrouillons\n\n1\n\nQuiz créés\n\n11\n\n1 tentative attendent votre correction\n\nCorrigez les réponses libres de vos étudiants\n\nCorriger\nMes formations\nVoir tout →\n\nALGO 2\n\nla suite d'algorthmiques\n\nBrouillon\n\nJavaScript pour débutants\n\nDécouvrir les variables, fonctions, tableaux, objets et mécanismes fondamentaux de JavaScript.\n\nPubliée\n\nDéveloppement Web Moderne\n\nApprendre les fondamentaux du HTML, du CSS, de JavaScript et construire une interface web moderne.\n\nPubliée\nRaccourcis\nMes formations & publications\nQuiz des chapitres\nCorrections en attente\nMessagerie",
+    "bodyClasses": "",
+    "bodyText": "E-Learning\n\nUniversitaire Local\n\nMes formations\nQuiz\nCorrections\n5\nJP\n\nJean Paul\n\nFormateur\n\nEspace formateur\n\nGérez vos formations et suivez les progrès de vos étudiants\n\nMes formations\n1 à corriger\n\nMes formations\n\n3\n\nPubliées\n\n2\n\nBrouillons\n\n1\n\nQuiz créés\n\n11\n\n1 tentative attendent votre correction\n\nCorrigez les réponses libres de vos étudiants\n\nCorriger\nMes formations\nVoir tout →\n\nALGO 2\n\nla suite d'algorthmiques\n\nBrouillon\n\nJavaScript pour débutants\n\nDécouvrir les variables, fonctions, tableaux, objets et mécanismes fondamentaux de JavaScript.\n\nPubliée\n\nDéveloppement Web Moderne\n\nApprendre les fondamentaux du HTML, du CSS, de JavaScript et construire une interface web moderne.\n\nPubliée\nRaccourcis\nMes formations & publications\nQuiz des chapitres\nCorrections en attente\nMessagerie\n\nE-Learning\n\nUniversitaire Local\n\nPlateforme d'apprentissage universitaire. Construisez votre parcours, partagez vos connaissances, progressez à votre rythme.\n\nNAVIGATION\nTableau de bord\nCatalogue\nMon parcours\nMessagerie\nRESSOURCES\nMon profil\nNotifications\nAide (bientôt)\nCONTACT\nsupport@eulocal.edu\nUniversité Local\n\n© 2026 E-Learning Universitaire. Tous droits réservés.\n\nFait avec passion pour l'éducation"
+  },
+  "FORMATEUR-FORMATIONS": {
+    "url": "http://localhost:5180/formateur/formations",
+    "title": "E-Learning Universitaire Locale",
+    "allLinks": [
+      {
+        "href": "/dashboard",
+        "text": "E-Learning\n\nUniversitaire Local"
+      },
+      {
+        "href": "/formateur/formations",
+        "text": "Mes formations"
+      },
+      {
+        "href": "/formateur/quizzes",
+        "text": "Quiz"
+      },
+      {
+        "href": "/formateur/corrections",
+        "text": "Corrections"
+      },
+      {
+        "href": "/notifications",
+        "text": "5"
+      },
+      {
+        "href": "/formateur/formations/5",
+        "text": "Construire"
+      },
+      {
+        "href": "/formateur/formations/2",
+        "text": "Construire"
+      },
+      {
+        "href": "/formateur/formations/1",
+        "text": "Construire"
+      },
+      {
+        "href": "/dashboard",
+        "text": "E-Learning\n\nUniversitaire Local"
+      },
+      {
+        "href": "/dashboard",
+        "text": "Tableau de bord"
+      },
+      {
+        "href": "/etudiant/catalogue",
+        "text": "Catalogue"
+      },
+      {
+        "href": "/etudiant/parcours",
+        "text": "Mon parcours"
+      },
+      {
+        "href": "/messagerie",
+        "text": "Messagerie"
+      },
+      {
+        "href": "/profile",
+        "text": "Mon profil"
+      },
+      {
+        "href": "/notifications",
+        "text": "Notifications"
+      }
+    ],
+    "hasSidebar": true,
+    "hasHeader": true,
+    "hasFooter": true,
+    "mainText": "Mes formations\n\nCréez et gérez vos contenus pédagogiques\n\nNouvelle formation\nToutes\n3\nPubliées\n2\nBrouillons\n1\nBrouillon\nALGO 2\n\nla suite d'algorthmiques\n\nConstruire\nPublier\nPubliée\nJavaScript pour débutants\n\nDécouvrir les variables, fonctions, tableaux, objets et mécanismes fondamentaux de JavaScript.\n\nConstruire\nDépublier\nPubliée\nDéveloppement Web Moderne\n\nApprendre les fondamentaux du HTML, du CSS, de JavaScript et construire une interface web moderne.\n\nConstruire\nDépublier",
+    "bodyClasses": "",
+    "bodyText": "E-Learning\n\nUniversitaire Local\n\nMes formations\nQuiz\nCorrections\n5\nJP\n\nJean Paul\n\nFormateur\n\nMes formations\n\nCréez et gérez vos contenus pédagogiques\n\nNouvelle formation\nToutes\n3\nPubliées\n2\nBrouillons\n1\nBrouillon\nALGO 2\n\nla suite d'algorthmiques\n\nConstruire\nPublier\nPubliée\nJavaScript pour débutants\n\nDécouvrir les variables, fonctions, tableaux, objets et mécanismes fondamentaux de JavaScript.\n\nConstruire\nDépublier\nPubliée\nDéveloppement Web Moderne\n\nApprendre les fondamentaux du HTML, du CSS, de JavaScript et construire une interface web moderne.\n\nConstruire\nDépublier\n\nE-Learning\n\nUniversitaire Local\n\nPlateforme d'apprentissage universitaire. Construisez votre parcours, partagez vos connaissances, progressez à votre rythme.\n\nNAVIGATION\nTableau de bord\nCatalogue\nMon parcours\nMessagerie\nRESSOURCES\nMon profil\nNotifications\nAide (bientôt)\nCONTACT\nsupport@eulocal.edu\nUniversité Local\n\n© 2026 E-Learning Universitaire. Tous droits réservés.\n\nFait avec passion pour l'éducation"
+  },
+  "FORMATEUR-BUILDER": {
+    "url": "http://localhost:5180/formateur/formations/1",
+    "title": "E-Learning Universitaire Locale",
+    "allLinks": [
+      {
+        "href": "/formateur/formations",
+        "text": "Mes formations"
+      },
+      {
+        "href": "/profile",
+        "text": "JP"
+      }
+    ],
+    "hasSidebar": true,
+    "hasHeader": true,
+    "hasFooter": false,
+    "mainText": "Informations de la formation\nPubliée\nTitre\nDescription\nEnregistrer\nDépublier\nChapitres (3)\nChapitre\n1\nComprendre le Web\n↑\n↓\nSection\n2\nHTML et structure des pages\n↑\n↓\nSection\n3\nCSS et mise en forme\n↑\n↓\nSection",
+    "bodyClasses": "",
+    "bodyText": "Mes formations\n\nDéveloppement Web Moderne\n\n3 chapitres\n\nPubliée\nJP\n\nARBRE DU COURS\n\n3 chapitres\n\n1\nComprendre le Web\n2\nHTML et structure des pages\n3\nCSS et mise en forme\nInformations de la formation\nPubliée\nTitre\nDescription\nEnregistrer\nDépublier\nChapitres (3)\nChapitre\n1\nComprendre le Web\n↑\n↓\nSection\n2\nHTML et structure des pages\n↑\n↓\nSection\n3\nCSS et mise en forme\n↑\n↓\nSection"
+  },
+  "ETUDIANT-DASHBOARD": {
+    "url": "http://localhost:5180/dashboard",
+    "title": "E-Learning Universitaire Locale",
+    "allLinks": [
+      {
+        "href": "/dashboard",
+        "text": "E-Learning\n\nUniversitaire Local"
+      },
+      {
+        "href": "/etudiant/catalogue",
+        "text": "Catalogue"
+      },
+      {
+        "href": "/etudiant/parcours",
+        "text": "Mon parcours"
+      },
+      {
+        "href": "/etudiant/tentatives",
+        "text": "Résultats"
+      },
+      {
+        "href": "/notifications",
+        "text": "4"
+      },
+      {
+        "href": "/etudiant/catalogue",
+        "text": "Explorer le catalogue"
+      },
+      {
+        "href": "/etudiant/parcours",
+        "text": "Mon parcours"
+      },
+      {
+        "href": "/etudiant/parcours",
+        "text": "Mon parcours →"
+      },
+      {
+        "href": "/etudiant/formation/3",
+        "text": "Bases de données SQL\n\n0%\n\nInscrit le 03 mars 2026"
+      },
+      {
+        "href": "/etudiant/formation/2",
+        "text": "JavaScript pour débutants\n\n33%\n\nInscrit le 02 mars"
+      },
+      {
+        "href": "/etudiant/formation/1",
+        "text": "Développement Web Moderne\n\n100%\n\nInscrit le 01 mar"
+      },
+      {
+        "href": "/etudiant/catalogue",
+        "text": "Catalogue"
+      },
+      {
+        "href": "/etudiant/parcours",
+        "text": "Mon parcours"
+      },
+      {
+        "href": "/etudiant/tentatives",
+        "text": "Mes résultats"
+      },
+      {
+        "href": "/messagerie",
+        "text": "Messagerie"
+      },
+      {
+        "href": "/dashboard",
+        "text": "E-Learning\n\nUniversitaire Local"
+      },
+      {
+        "href": "/dashboard",
+        "text": "Tableau de bord"
+      },
+      {
+        "href": "/etudiant/catalogue",
+        "text": "Catalogue"
+      },
+      {
+        "href": "/etudiant/parcours",
+        "text": "Mon parcours"
+      },
+      {
+        "href": "/messagerie",
+        "text": "Messagerie"
+      },
+      {
+        "href": "/profile",
+        "text": "Mon profil"
+      },
+      {
+        "href": "/notifications",
+        "text": "Notifications"
+      }
+    ],
+    "hasSidebar": true,
+    "hasHeader": true,
+    "hasFooter": true,
+    "mainText": "Bonjour, Grâce 👋\n\nVous êtes inscrite à 3 formations\n\n44%\nProgression moyenne\nExplorer le catalogue\nMon parcours\n\nMes formations\n\n3\n\nProgression moy.\n\n44%\n\nQuiz réussis\n\n4\n\nEn attente\n\n0\n\nContinuer l'apprentissage\nMon parcours →\n\nBases de données SQL\n\n0%\n\nInscrit le 03 mars 2026\n\nJavaScript pour débutants\n\n33%\n\nInscrit le 02 mars 2026\n\nDéveloppement Web Moderne\n\n100%\n\nInscrit le 01 mars 2026\n\nRaccourcis\nCatalogue\nMon parcours\nMes résultats\nMessagerie\nDernières tentatives\nQuiz - CSS\n100/100\nRéussi\nQuiz - Premiers pas JavaScript\n100/100\nRéussi\nQuiz - CSS\n40/100\nÉchoué\nQuiz - HTML\n75/100\nRéussi\nQuiz - Comprendre le Web\n100/100\nRéussi",
+    "bodyClasses": "",
+    "bodyText": "E-Learning\n\nUniversitaire Local\n\nCatalogue\nMon parcours\nRésultats\n4\nGW\n\nGrâce\n\nEtudiant\n\nBonjour, Grâce 👋\n\nVous êtes inscrite à 3 formations\n\n44%\nProgression moyenne\nExplorer le catalogue\nMon parcours\n\nMes formations\n\n3\n\nProgression moy.\n\n44%\n\nQuiz réussis\n\n4\n\nEn attente\n\n0\n\nContinuer l'apprentissage\nMon parcours →\n\nBases de données SQL\n\n0%\n\nInscrit le 03 mars 2026\n\nJavaScript pour débutants\n\n33%\n\nInscrit le 02 mars 2026\n\nDéveloppement Web Moderne\n\n100%\n\nInscrit le 01 mars 2026\n\nRaccourcis\nCatalogue\nMon parcours\nMes résultats\nMessagerie\nDernières tentatives\nQuiz - CSS\n100/100\nRéussi\nQuiz - Premiers pas JavaScript\n100/100\nRéussi\nQuiz - CSS\n40/100\nÉchoué\nQuiz - HTML\n75/100\nRéussi\nQuiz - Comprendre le Web\n100/100\nRéussi\n\nE-Learning\n\nUniversitaire Local\n\nPlateforme d'apprentissage universitaire. Construisez votre parcours, partagez vos connaissances, progressez à votre rythme.\n\nNAVIGATION\nTableau de bord\nCatalogue\nMon parcours\nMessagerie\nRESSOURCES\nMon profil\nNotifications\nAide (bientôt)\nCONTACT\nsupport@eulocal.edu\nUniversité Local\n\n© 2026 E-Learning Universitaire. Tous droits réservés.\n\nFait avec passion pour l'éducation"
+  },
+  "ETUDIANT-CATALOGUE": {
+    "url": "http://localhost:5180/etudiant/catalogue",
+    "title": "E-Learning Universitaire Locale",
+    "allLinks": [
+      {
+        "href": "/dashboard",
+        "text": "E-Learning\n\nUniversitaire Local"
+      },
+      {
+        "href": "/etudiant/catalogue",
+        "text": "Catalogue"
+      },
+      {
+        "href": "/etudiant/parcours",
+        "text": "Mon parcours"
+      },
+      {
+        "href": "/etudiant/tentatives",
+        "text": "Résultats"
+      },
+      {
+        "href": "/notifications",
+        "text": "4"
+      },
+      {
+        "href": "/etudiant/formation/3",
+        "text": "Voir la formation"
+      },
+      {
+        "href": "/etudiant/formation/2",
+        "text": "Voir la formation"
+      },
+      {
+        "href": "/etudiant/formation/1",
+        "text": "Voir la formation"
+      },
+      {
+        "href": "/dashboard",
+        "text": "E-Learning\n\nUniversitaire Local"
+      },
+      {
+        "href": "/dashboard",
+        "text": "Tableau de bord"
+      },
+      {
+        "href": "/etudiant/catalogue",
+        "text": "Catalogue"
+      },
+      {
+        "href": "/etudiant/parcours",
+        "text": "Mon parcours"
+      },
+      {
+        "href": "/messagerie",
+        "text": "Messagerie"
+      },
+      {
+        "href": "/profile",
+        "text": "Mon profil"
+      },
+      {
+        "href": "/notifications",
+        "text": "Notifications"
+      }
+    ],
+    "hasSidebar": true,
+    "hasHeader": true,
+    "hasFooter": true,
+    "mainText": "Catalogue de formations\n\nExplorez nos formations et commencez votre parcours d'apprentissage\n\nToutes les catégories\n\n3 formations disponibles\n\nBases de données SQL\n\nComprendre les bases du modèle relationnel, les requêtes SQL, les relations et les contraintes.\n\nVoir la formation\nJavaScript pour débutants\n\nDécouvrir les variables, fonctions, tableaux, objets et mécanismes fondamentaux de JavaScript.\n\nVoir la formation\nDéveloppement Web Moderne\n\nApprendre les fondamentaux du HTML, du CSS, de JavaScript et construire une interface web moderne.\n\nVoir la formation",
+    "bodyClasses": "",
+    "bodyText": "E-Learning\n\nUniversitaire Local\n\nCatalogue\nMon parcours\nRésultats\n4\nGW\n\nGrâce\n\nEtudiant\n\nCatalogue de formations\n\nExplorez nos formations et commencez votre parcours d'apprentissage\n\nToutes les catégories\n\n3 formations disponibles\n\nBases de données SQL\n\nComprendre les bases du modèle relationnel, les requêtes SQL, les relations et les contraintes.\n\nVoir la formation\nJavaScript pour débutants\n\nDécouvrir les variables, fonctions, tableaux, objets et mécanismes fondamentaux de JavaScript.\n\nVoir la formation\nDéveloppement Web Moderne\n\nApprendre les fondamentaux du HTML, du CSS, de JavaScript et construire une interface web moderne.\n\nVoir la formation\n\nE-Learning\n\nUniversitaire Local\n\nPlateforme d'apprentissage universitaire. Construisez votre parcours, partagez vos connaissances, progressez à votre rythme.\n\nNAVIGATION\nTableau de bord\nCatalogue\nMon parcours\nMessagerie\nRESSOURCES\nMon profil\nNotifications\nAide (bientôt)\nCONTACT\nsupport@eulocal.edu\nUniversité Local\n\n© 2026 E-Learning Universitaire. Tous droits réservés.\n\nFait avec passion pour l'éducation"
+  },
+  "ETUDIANT-CHAPITRE": {
+    "url": "http://localhost:5180/etudiant/chapitre/1",
+    "title": "E-Learning Universitaire Locale",
+    "allLinks": [
+      {
+        "href": "/etudiant/parcours",
+        "text": "Mon parcours"
+      },
+      {
+        "href": "/notifications",
+        "text": "4"
+      },
+      {
+        "href": "/profile",
+        "text": "GW"
+      },
+      {
+        "href": "/etudiant/chapitre/1",
+        "text": "Comprendre le Web"
+      },
+      {
+        "href": "/etudiant/chapitre/1/sous-section/1",
+        "text": "Le navigateur"
+      },
+      {
+        "href": "/etudiant/chapitre/1/sous-section/2",
+        "text": "URL et ressources"
+      },
+      {
+        "href": "/etudiant/chapitre/1/sous-section/3",
+        "text": "Le client"
+      },
+      {
+        "href": "/etudiant/chapitre/1/sous-section/4",
+        "text": "Le serveur"
+      },
+      {
+        "href": "/etudiant/chapitre/2",
+        "text": "HTML et structure des pages"
+      },
+      {
+        "href": "/etudiant/chapitre/3",
+        "text": "CSS et mise en forme"
+      },
+      {
+        "href": "/etudiant/parcours",
+        "text": "Mon parcours"
+      },
+      {
+        "href": "/etudiant/chapitre/1/sous-section/1",
+        "text": "1.1\nLe navigateur"
+      },
+      {
+        "href": "/etudiant/chapitre/1/sous-section/2",
+        "text": "1.2\nURL et ressources"
+      },
+      {
+        "href": "/etudiant/chapitre/1/sous-section/3",
+        "text": "2.1\nLe client"
+      },
+      {
+        "href": "/etudiant/chapitre/1/sous-section/4",
+        "text": "2.2\nLe serveur"
+      },
+      {
+        "href": "/etudiant/quiz/1",
+        "text": "Quiz de fin de chapitre\n\nRéussissez ce quiz pour d"
+      }
+    ],
+    "hasSidebar": true,
+    "hasHeader": true,
+    "hasFooter": false,
+    "mainText": "Mon parcours\nComprendre le Web\n\nIntroduction au fonctionnement général du Web.\n\n2 sections\n4 sous-sections\n1\nLe fonctionnement du navigateur\n\nComprendre le rôle du navigateur.\n\n1.1\nLe navigateur\n1.2\nURL et ressources\n2\nClient et serveur\n\nDécouvrir la communication HTTP.\n\n2.1\nLe client\n2.2\nLe serveur\n\nQuiz de fin de chapitre\n\nRéussissez ce quiz pour débloquer le chapitre suivant\n\nRequis",
+    "bodyClasses": "",
+    "bodyText": "Mon parcours\n\nDéveloppement Web Moderne\n\nProgression\n100%\n4\nGW\n\nCONTENU DU COURS\n\nProgression\n100%\nComprendre le Web\n\nLE FONCTIONNEMENT DU NAVIGATEUR\n\nLe navigateur\nURL et ressources\n\nCLIENT ET SERVEUR\n\nLe client\nLe serveur\nHTML et structure des pages\nCSS et mise en forme\nMon parcours\nComprendre le Web\n\nIntroduction au fonctionnement général du Web.\n\n2 sections\n4 sous-sections\n1\nLe fonctionnement du navigateur\n\nComprendre le rôle du navigateur.\n\n1.1\nLe navigateur\n1.2\nURL et ressources\n2\nClient et serveur\n\nDécouvrir la communication HTTP.\n\n2.1\nLe client\n2.2\nLe serveur\n\nQuiz de fin de chapitre\n\nRéussissez ce quiz pour débloquer le chapitre suivant\n\nRequis"
+  },
+  "ETUDIANT-TENTATIVES": {
+    "url": "http://localhost:5180/etudiant/tentatives",
+    "title": "E-Learning Universitaire Locale",
+    "allLinks": [],
+    "hasSidebar": false,
+    "hasHeader": false,
+    "hasFooter": false,
+    "mainText": "NO MAIN FOUND",
+    "bodyClasses": "",
+    "bodyText": ""
+  }
+}

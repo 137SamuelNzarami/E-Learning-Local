@@ -138,20 +138,19 @@ ALTER TABLE quiz
 -- dans les données historiques et ne doivent pas être détruits.
 
 -- ------------------------------------------------------------
--- 5) QUESTIONS : QCM / LIBRE
+-- 5) QUESTIONS : QCM uniquement (auto-corrigé)
 -- ------------------------------------------------------------
 ALTER TABLE questions
-  ADD COLUMN type ENUM('QCM','LIBRE') NOT NULL DEFAULT 'QCM' AFTER enonce,
+  ADD COLUMN type ENUM('QCM') NOT NULL DEFAULT 'QCM' AFTER enonce,
   ADD COLUMN points INT NOT NULL DEFAULT 1 AFTER type;
 
 -- ------------------------------------------------------------
 -- 6) TENTATIVES : cycle de vie complet
 -- ------------------------------------------------------------
 ALTER TABLE tentatives
-  ADD COLUMN statut ENUM('EN_COURS','SOUMISE','A_CORRIGER','REUSSIE','ECHOUEE')
+  ADD COLUMN statut ENUM('EN_COURS','SOUMISE','REUSSIE','ECHOUEE')
     NOT NULL DEFAULT 'EN_COURS' AFTER note,
-  ADD COLUMN date_soumission DATETIME NULL AFTER statut,
-  ADD COLUMN date_correction DATETIME NULL AFTER date_soumission;
+  ADD COLUMN date_soumission DATETIME NULL AFTER statut;
 
 -- Migration des tentatives historiques (note unique >= 50 dans l'ancien modèle)
 UPDATE tentatives
@@ -163,14 +162,10 @@ SET statut = CASE
      date_soumission = created_at;
 
 -- ------------------------------------------------------------
--- 7) RÉPONSES ÉTUDIANTS : support des réponses libres
+-- 7) RÉPONSES ÉTUDIANTS : QCM uniquement
 -- ------------------------------------------------------------
--- id_reponse nullable : une question LIBRE n'a pas de choix prédéfini.
--- La réponse libre est stockée dans `contenu` (jamais détournée dans id_reponse).
+-- id_reponse nullable pour compatibilité (aucune question libre en produit).
 ALTER TABLE reponses_etudiants MODIFY id_reponse INT NULL DEFAULT NULL;
-ALTER TABLE reponses_etudiants ADD COLUMN contenu TEXT NULL AFTER id_reponse;
--- note attribuee par le formateur (questions LIBRE, correction manuelle)
-ALTER TABLE reponses_etudiants ADD COLUMN note DECIMAL(5,2) NULL AFTER contenu;
 ALTER TABLE reponses_etudiants ADD INDEX idx_reponses_etu_tentative_question (id_tentative, id_question);
 
 -- ------------------------------------------------------------

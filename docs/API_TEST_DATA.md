@@ -193,7 +193,7 @@ Vérification étudiant (après inscription) :
 GET /api/sous-sections/<ID_SS>  (ETD inscrit)   → 200, contenu HTML restitué
 ```
 
-### Étape 4 — Quiz du chapitre 1 (1 QCM + 1 LIBRE)
+### Étape 4 — Quiz du chapitre 1 (QCM uniquement)
 
 ```
 POST /api/quizzes               (FOR)
@@ -203,10 +203,6 @@ POST /api/quizzes               (FOR)
 POST /api/questions             (FOR)
 { "id_quiz": <ID_QUIZ>, "enonce": "HTML signifie ?", "type": "QCM", "points": 1 }
 → data.id = <ID_Q_QCM>
-
-POST /api/questions             (FOR)
-{ "id_quiz": <ID_QUIZ>, "enonce": "Citez un point clé du cours.", "type": "LIBRE", "points": 1 }
-→ data.id = <ID_Q_LIBRE>
 
 POST /api/answers               (FOR)
 { "id_question": <ID_Q_QCM>, "texte": "HyperText Markup Language", "est_correcte": true }
@@ -220,6 +216,7 @@ POST /api/answers               (FOR)
 Contre-tests utiles :
 
 - re-poster un quiz sur `<ID_CH1>` → **409** ;
+- `POST /api/questions` avec `{ "type": "LIBRE" }` → **409** « Seules les questions à choix multiple (QCM) sont prises en charge. » (ou 422 du validateur) ;
 - `PUT /api/questions/<ID_Q_QCM>` avec `{ "type": "LIBRE" }` → **422** ;
 - `GET /api/answers/question/<ID_Q_QCM>` en ETD → 200 **sans** `est_correcte`.
 
@@ -261,64 +258,56 @@ POST /api/attempts/quiz/<ID_QUIZ>/start      (ETD)
 (2e appel identique → même tentative, comportement idempotent)
 ```
 
-Soumission **incomplète** (contre-test) :
+Soumission **incomplète** (contre-test — toutes les questions du quiz doivent figurer) :
 
 ```
 POST /api/attempts/<ID_TENTATIVE>/submit     (ETD)
-{ "reponses": [ { "id_question": <ID_Q_QCM>, "id_reponses": [<ID_REP_OK>] } ] }
-→ 409 « La question <ID_Q_LIBRE> n'a pas été répondue. »
+{ "reponses": [] }
+→ 409 « La question <ID_Q_QCM> n'a pas été répondue. »
 ```
 
-Soumission complète (QCM juste + LIBRE) :
+Soumission avec une réponse erronée → auto-corrigé **ECHOUEE** :
 
 ```
 POST /api/attempts/<ID_TENTATIVE>/submit     (ETD)
+{ "reponses": [ { "id_question": <ID_Q_QCM>, "id_reponses": [<ID_REP_KO>] } ] }
+→ 200 : statut ECHOUEE, note 0, score_reussite 50
+  (+ notification « Quiz échoué » à l'étudiant)
+```
+
+Repassage (un quiz échoué peut être repassé) puis soumission QCM juste → **REUSSIE** :
+
+```
+POST /api/attempts/quiz/<ID_QUIZ>/start      (ETD)
+→ 200 : nouvelle tentative data.tentative.id_tentative = <ID_TENTATIVE2>
+
+POST /api/attempts/<ID_TENTATIVE2>/submit    (ETD)
 {
   "reponses": [
-    { "id_question": <ID_Q_QCM>, "id_reponses": [<ID_REP_OK>] },
-    { "id_question": <ID_Q_LIBRE>, "contenu": "Les boucles." }
+    { "id_question": <ID_Q_QCM>, "id_reponses": [<ID_REP_OK>] }
   ]
 }
-→ 200 : statut A_CORRIGER, note null, a_corriger true
-  (+ notification « Tentative à corriger » au formateur)
+→ 200 : statut REUSSIE, note 100, score_reussite 50
+  (+ notification « Quiz réussi » à l'étudiant)
 ```
+
+Contre-tests :
+
+- réponse étrangère à la question → **409** ;
+- re-soumettre une tentative déjà soumise → **409** « Cette tentative a déjà été soumise… » ;
+- `PATCH /api/attempts/<ID_TENTATIVE>/corriger` → **404** (aucune route de correction manuelle) ;
+- `POST /api/questions` avec `type` ≠ `QCM` → **409/422**.
 
 Historique et cloisonnement :
 
 ```
 GET /api/attempts/quiz/<ID_QUIZ>/mine        (ETD)   → 200
-GET /api/student-answers/attempt/<ID_TENTATIVE>   (FOR)   → 200 (avec corrigé)
-GET /api/attempts/<ID_TENTATIVE>             (2e ETD non propriétaire) → 403
+GET /api/student-answers/attempt/<ID_TENTATIVE2>   (FOR)   → 200 (avec est_correcte)
+GET /api/student-answers/attempt/<ID_TENTATIVE2>   (ETD)   → 200 (sans est_correcte)
+GET /api/attempts/<ID_TENTATIVE2>            (2e ETD non propriétaire) → 403
 ```
 
-### Étape 8 — Correction manuelle par le formateur
-
-Récupérer la ligne libre :
-
-```
-GET /api/student-answers/attempt/<ID_TENTATIVE>   (FOR)
-→ repérer la ligne type_question="LIBRE" : data[].id_reponse_etudiant = <ID_RE_ET>
-```
-
-Contre-tests :
-
-```
-PATCH /api/attempts/<ID_TENTATIVE>/corriger   (ETD)   → 403
-PATCH /api/attempts/<ID_TENTATIVE>/corriger   (FOR)
-{ "notes": [ { "id_reponse_etudiant": <ID_RE_ET>, "note": 99 } ] }
-→ 409 (note > points_question=1)
-```
-
-Correction valide :
-
-```
-PATCH /api/attempts/<ID_TENTATIVE>/corriger   (FOR)
-{ "notes": [ { "id_reponse_etudiant": <ID_RE_ET>, "note": 1 } ] }
-→ 200 : { statut: "REUSSIE", note: 100, score_reussite: 50 }
-  (+ notification « Quiz validé » à l'étudiant)
-```
-
-### Étape 9 — Déblocage et progression
+### Étape 8 — Déblocage et progression
 
 ```
 GET /api/chapters/formation/<ID_FORMATION>   (ETD)
@@ -331,7 +320,7 @@ POST /api/chapters/<ID_CH2>/complete         (ETD) → 409 si CH2 avait un quiz 
 POST /api/attempts/quiz/<ID_QUIZ>/start      (ETD) → 409 « Ce quiz est déjà réussi… »
 ```
 
-### Étape 10 — Messagerie (conversation automatique de l'étape 5)
+### Étape 9 — Messagerie (conversation automatique de l'étape 5)
 
 Retrouver la conversation (SQL direct ou `GET /api/conversation-participants/user/<ETUDIANT_ID>`)
 puis :
@@ -343,7 +332,7 @@ POST /api/messages              (FOR)
 → 200 (+ notification « Nouveau message » à l'étudiant)
 ```
 
-### Étape 11 — Avis sur la formation
+### Étape 10 — Avis sur la formation
 
 ```
 POST /api/reviews               (ETD inscrit)
@@ -352,7 +341,7 @@ POST /api/reviews               (ETD inscrit)
 → 200 (+ notification « Nouvel avis » au formateur)
 ```
 
-### Étape 12 — Notifications de l'étudiant
+### Étape 11 — Notifications de l'étudiant
 
 ```
 GET /api/notifications/count-unread          (ETD) → 200, data.count ≥ 1
@@ -368,10 +357,10 @@ PATCH /api/notifications/<ID_NOTIF>/lu       (ETD) → 200 (sa propre notif uniq
 |------------------|----------------------------------------|
 | 1 → 4 (construction contenu) | ownership, services-full, http-routes |
 | 5 → 6 (inscription, verrouillage, corrigé masqué) | ownership, cross-role |
-| 7 → 9 (tentative, correction, déblocage) | cross-role, services-full |
-| 10 (message) | notifications-e2e |
-| 11 (avis) | notifications-e2e, features |
-| 12 (notifications) | notifications-e2e |
+| 7 → 8 (tentative, correction automatique, déblocage) | cross-role, services-full |
+| 9 (message) | notifications-e2e |
+| 10 (avis) | notifications-e2e, features |
+| 11 (notifications) | notifications-e2e |
 
 Exécution globale : `cd backend && npm test` (orchestrateur `tests/run-all.js`,
 8 suites, 306 vérifications, 0 échec à la date du document).
@@ -386,6 +375,7 @@ Exécution globale : `cd backend && npm test` (orchestrateur `tests/run-all.js`,
 2. Une formation doit être **publiée** avant toute inscription étudiante.
 3. Un quiz doit contenir **au moins une question** pour être passable.
 4. Toute question du quiz doit figurer dans `reponses[]` de la soumission.
-5. Les notes de correction sont bornées par `points_question` de chaque ligne LIBRE.
+5. Toutes les questions sont QCM ; la correction est entièrement automatique à
+   la soumission (aucune correction manuelle par le formateur).
 6. Les données créées manuellement restent en base : penser à nettoyer si vous
    rejouez les suites automatisées (elles, se nettoient elles-mêmes).

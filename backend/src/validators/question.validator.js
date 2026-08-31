@@ -16,8 +16,8 @@ export const createQuestionValidator = [
 
   body("type")
     .optional()
-    .isIn(["QCM", "LIBRE"])
-    .withMessage("Le type doit être QCM ou LIBRE."),
+    .isIn(["QCM"])
+    .withMessage("Le type doit être QCM."),
 
   body("points")
     .optional()

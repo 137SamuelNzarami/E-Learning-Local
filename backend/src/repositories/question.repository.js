@@ -53,7 +53,7 @@ class QuestionRepository {
     return rows;
   }
   /**
-   * Créer une question (QCM ou LIBRE)
+   * Créer une question (QCM uniquement)
    */
   async create(data) {
     const [result] = await pool.query(

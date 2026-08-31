@@ -43,37 +43,17 @@ class AttemptController {
    * Body :
    * {
    *   "reponses": [
-   *     { "id_question": 1, "id_reponses": [10] },          // QCM
-   *     { "id_question": 2, "contenu": "Ma réponse..." }    // LIBRE
+   *     { "id_question": 1, "id_reponses": [10] }   // QCM
    *   ]
    * }
    *
-   * QCM : correction automatique. LIBRE : A_CORRIGER (formateur).
+   * QCM : correction automatique.
    */
   async submit(req, res) {
     try {
       const { id } = req.params;
       const row = await AttemptService.submitAttempt(id, req.body, req.user);
       return ApiResponse.success(res, "Tentative soumise avec succès.", row);
-    } catch (error) {
-      return ApiResponse.fromError(res, error);
-    }
-  }
-
-  /**
-   * Correction manuelle des réponses libres
-   *
-   * Body : { notes: [ { id_reponse_etudiant, note } ] }
-   */
-  async corriger(req, res) {
-    try {
-      const { id } = req.params;
-      const row = await AttemptService.corrigerTentative(
-        id,
-        req.body,
-        req.user,
-      );
-      return ApiResponse.success(res, "Tentative corrigée avec succès.", row);
     } catch (error) {
       return ApiResponse.fromError(res, error);
     }

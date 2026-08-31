@@ -93,7 +93,6 @@ Notamment :
 - quiz ;
 - questions ;
 - réponses ;
-- correction des réponses libres ;
 - suivi de ses étudiants ;
 - conversations ;
 - notifications.
@@ -474,10 +473,7 @@ Dans ce cas, une tentative de création supplémentaire doit être traitée comm
 
 Les questions appartiennent aux quiz.
 
-Le système distingue notamment :
-
-- questions à choix multiple ;
-- questions libres.
+Le système ne comporte que des **questions à choix multiple (QCM)**.
 
 Le type d'une question peut être figé après certaines étapes de création/modification selon les règles backend.
 
@@ -493,7 +489,7 @@ Pour une question QCM, les réponses permettent de déterminer la bonne réponse
 
 IMPORTANT :
 
-Le champ indiquant qu'une réponse est correcte ne doit jamais être exposé à l'étudiant avant la correction.
+Le champ indiquant qu'une réponse est correcte ne doit jamais être exposé à l'étudiant.
 
 Le frontend étudiant doit recevoir uniquement les données nécessaires pour répondre au quiz.
 
@@ -507,17 +503,15 @@ Cycle métier :
 
 EN_COURS
 ↓
-SOUMISE / A_CORRIGER
-↓
 REUSSIE ou ECHOUEE
 
-Pour les QCM :
+Toutes les questions sont QCM et la correction est **100 % automatique** côté
+serveur au moment de la soumission.
 
-→ correction automatique par le serveur.
-
-Pour les questions libres :
-
-→ correction par le formateur propriétaire.
+La valeur `SOUMISE` existe dans l'enum du statut mais le produit ne transitionne
+jamais vers elle : la soumission passe directement de `EN_COURS` à `REUSSIE` ou
+`ECHOUEE`. Il n'existe aucun workflow de correction manuelle (pas de `A_CORRIGER`,
+pas de route `corriger`, pas de `date_correction`).
 
 La note est calculée et contrôlée côté serveur.
 
@@ -525,58 +519,37 @@ Le frontend ne doit jamais calculer ou imposer lui-même la note finale.
 
 ---
 
-# 19. CORRECTION DES TENTATIVES
-
-Route :
-
-PATCH /attempts/:id/corriger
-
-Cette opération est réservée au propriétaire de la formation selon les règles backend.
-
-Un étudiant ne peut pas corriger sa propre tentative.
-
-Le backend contrôle :
-
-- l'identité ;
-- la propriété de la formation ;
-- les limites de la note ;
-- l'état de la tentative.
-
----
-
-# 20. REPONSES ÉTUDIANTS
+# 19. REPONSES ÉTUDIANTS
 
 Les réponses des étudiants sont associées aux tentatives et aux questions.
 
+Chaque réponse étudiante référence une réponse QCM choisie (`id_reponse`) :
+les champs `contenu` (texte libre) et `note` ont été retirés du produit.
+
 Le frontend étudiant doit pouvoir :
 
-- saisir une réponse ;
-- sauvegarder/envoyer selon le workflow ;
 - consulter le résultat autorisé.
 
-Le frontend formateur doit pouvoir consulter les réponses qu'il est autorisé à corriger.
+Le frontend formateur propriétaire du quiz peut consulter les réponses avec la
+correction (`est_correcte`) ; il n'existe aucune correction manuelle à saisir.
 
 Les réponses d'un étudiant ne doivent pas être accessibles à un autre étudiant.
 
 ---
 
-# 21. RÉUSSITE DU QUIZ
+# 20. RÉUSSITE DU QUIZ
 
 La validation d'un quiz est une règle backend.
 
-Pour un QCM :
+Toutes les questions sont QCM :
 
-→ le serveur corrige automatiquement.
+→ le serveur corrige automatiquement à la soumission.
 
-Pour une question libre :
-
-→ le formateur corrige et confirme la note.
-
-Une tentative réussie permet de valider le chapitre selon la logique de progression actuelle.
+Un quiz réussi débloque le chapitre suivant selon la logique de progression actuelle.
 
 ---
 
-# 22. REPASSAGE DU QUIZ
+# 21. REPASSAGE DU QUIZ
 
 Un étudiant peut repasser un quiz lorsqu'il a échoué, selon les règles backend.
 
@@ -586,7 +559,7 @@ Le frontend doit afficher le comportement réel retourné par l'API et non inven
 
 ---
 
-# 23. VERROUILLAGE DES CHAPITRES
+# 22. VERROUILLAGE DES CHAPITRES
 
 Le parcours est séquentiel.
 
@@ -614,7 +587,7 @@ Il ne faut jamais se contenter de masquer le bouton.
 
 ---
 
-# 24. PROGRESSION
+# 23. PROGRESSION
 
 La progression est calculée côté serveur.
 
@@ -630,7 +603,7 @@ La progression doit rester cohérente entre :
 
 ---
 
-# 25. INSCRIPTIONS
+# 24. INSCRIPTIONS
 
 Une inscription associe un étudiant à une formation.
 
@@ -653,7 +626,7 @@ Le frontend doit refléter les résultats retournés par l'API.
 
 ---
 
-# 26. CONVERSATIONS
+# 25. CONVERSATIONS
 
 Les conversations permettent la communication entre utilisateurs autorisés.
 
@@ -669,7 +642,7 @@ Le frontend doit afficher les conversations autorisées sans exposer les identif
 
 ---
 
-# 27. PARTICIPANTS
+# 26. PARTICIPANTS
 
 Les participants déterminent les utilisateurs autorisés à accéder à une conversation.
 
@@ -679,7 +652,7 @@ Le frontend ne doit pas considérer un simple ID comme une preuve d'accès.
 
 ---
 
-# 28. MESSAGES
+# 27. MESSAGES
 
 Les messages appartiennent aux conversations.
 
@@ -695,7 +668,7 @@ L'envoi d'un message peut déclencher une notification pour les autres participa
 
 ---
 
-# 29. NOTIFICATIONS
+# 28. NOTIFICATIONS
 
 Les notifications sont liées à des événements métier.
 
@@ -703,8 +676,8 @@ Les événements actuellement couverts par le backend comprennent notamment :
 
 - inscription ;
 - nouveau message ;
-- tentative à corriger ;
-- correction/validation de quiz ;
+- résultat de quiz (« Quiz réussi » / « Quiz échoué », notification immédiate à
+  l'étudiant à la soumission) ;
 - nouvel avis.
 
 Le frontend doit afficher :
@@ -718,7 +691,7 @@ Le frontend doit afficher :
 
 ---
 
-# 30. NOTIFICATIONS NON BLOQUANTES
+# 29. NOTIFICATIONS NON BLOQUANTES
 
 Une notification ne doit pas empêcher l'action métier principale lorsqu'une erreur de notification survient si le backend applique cette règle.
 
@@ -732,7 +705,7 @@ Une erreur de notification ne doit pas transformer automatiquement une inscripti
 
 ---
 
-# 31. AVIS
+# 30. AVIS
 
 Les avis permettent aux étudiants autorisés de donner une appréciation sur une formation.
 
@@ -747,7 +720,7 @@ Le frontend ne doit jamais permettre à un utilisateur de choisir arbitrairement
 
 ---
 
-# 32. ACCÈS AUX FICHIERS
+# 31. ACCÈS AUX FICHIERS
 
 Lorsque des fichiers sont référencés dans du contenu Rich Text, leur accès doit passer par les mécanismes de sécurité du backend.
 
@@ -762,7 +735,7 @@ Le frontend ne doit pas exposer directement un chemin physique du serveur comme 
 
 ---
 
-# 33. SÉCURITÉ IDOR
+# 32. SÉCURITÉ IDOR
 
 Le backend protège les ressources contre les accès directs par modification d'identifiant.
 
@@ -782,7 +755,7 @@ Le frontend doit respecter les erreurs 403/404 retournées par le serveur.
 
 ---
 
-# 34. MATRICE GÉNÉRALE DES ACCÈS
+# 33. MATRICE GÉNÉRALE DES ACCÈS
 
 | Fonction | Admin | Formateur propriétaire | Formateur étranger | Étudiant inscrit | Étudiant non inscrit |
 |---|---|---|---|---|---|
@@ -794,7 +767,7 @@ Le frontend doit respecter les erreurs 403/404 retournées par le serveur.
 | Gérer sous-sections | Oui selon permission | Oui | Non | Non | Non |
 | Gérer quiz propriétaire | Oui selon permission | Oui | Non | Non | Non |
 | Passer quiz | Non | Non | Non | Oui | Non |
-| Corriger questions libres | Oui selon permission | Oui propriétaire | Non | Non | Non |
+| Correction automatique des QCM (au serveur) | Automatique | Automatique | Automatique | Automatique | Automatique |
 | Consulter sa progression | Oui selon supervision | Selon permission | Selon permission | Oui | Non |
 | S'inscrire | Selon rôle | Selon rôle | Selon rôle | Oui | Oui si formation publiée |
 | Messagerie autorisée | Oui selon permission | Oui | Selon permission | Oui participant | Non |
@@ -805,7 +778,7 @@ Cette matrice doit toujours être considérée comme indicative lorsque le backe
 
 ---
 
-# 35. RÈGLES POUR LE FRONTEND REACT
+# 34. RÈGLES POUR LE FRONTEND REACT
 
 Le frontend doit :
 
@@ -824,7 +797,7 @@ Le frontend doit :
 
 ---
 
-# 36. STRUCTURE CONSEILLÉE DES SERVICES FRONTEND
+# 35. STRUCTURE CONSEILLÉE DES SERVICES FRONTEND
 
 Le frontend peut organiser ses appels API par domaine :
 
@@ -852,7 +825,7 @@ Les noms doivent correspondre aux services réellement présents dans le projet.
 
 ---
 
-# 37. RÈGLE DE SYNCHRONISATION BACKEND / FRONTEND
+# 36. RÈGLE DE SYNCHRONISATION BACKEND / FRONTEND
 
 Avant toute modification frontend :
 
@@ -870,7 +843,7 @@ Le frontend ne doit jamais devenir une deuxième implémentation du métier.
 
 ---
 
-# 38. TESTS API
+# 37. TESTS API
 
 Les tests doivent être effectués avec :
 
@@ -891,8 +864,6 @@ Les scénarios importants sont :
 - création de questions ;
 - tentative QCM ;
 - correction automatique ;
-- tentative question libre ;
-- correction formateur ;
 - verrouillage chapitre ;
 - progression ;
 - conversation ;
@@ -903,7 +874,7 @@ Les scénarios importants sont :
 
 ---
 
-# 39. DOCUMENTATION DE RÉFÉRENCE
+# 38. DOCUMENTATION DE RÉFÉRENCE
 
 Ce fichier constitue le contrat général.
 
@@ -926,7 +897,7 @@ La documentation doit ensuite être corrigée pour correspondre au code.
 
 ---
 
-# 40. RÈGLE FINALE
+# 39. RÈGLE FINALE
 
 Aucune route fictive ne doit être ajoutée au frontend.
 

@@ -61,8 +61,15 @@ class ChapterService {
    * validé les chapitres précédents reçoit un refus (403).
    */
   async getChapterById(id, user) {
-    // Vérifie existence + inscription + chapitres précédents validés
+    // Garde-fou backend (inscription + chapitres précédents validés)
     const chapter = await ParcoursService.assertChapterAccessible(id, user);
+
+    // L'étudiant a besoin du contexte de parcours : état de validation,
+    // chapitre suivant et fin de formation (bouton "Chapitre suivant").
+    if (isEtudiant(user)) {
+      return await ParcoursService.getChapterContext(id, user);
+    }
+
     return chapter;
   }
 

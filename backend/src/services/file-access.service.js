@@ -2,6 +2,7 @@ import path from "node:path";
 
 import ROLES from "../constants/role.js";
 import SousSectionRepository from "../repositories/sous-section.repository.js";
+import SectionRepository from "../repositories/section.repository.js";
 import EnrollmentRepository from "../repositories/enrollment.repository.js";
 import FormationRepository from "../repositories/formation.repository.js";
 import { canAccessFormation, isAdmin } from "../utils/ownership.js";
@@ -12,9 +13,9 @@ import { uploadDir } from "../config/upload.js";
  *
  * Dans la nouvelle architecture pédagogique, les fichiers (vidéos,
  * documents, images...) sont insérés dans le contenu RICH TEXT des
- * sous-sections via l'éditeur. Le HTML référence les fichiers avec
- * une URL `/api/files/<nom>` ; le serveur retrouve la formation
- * propriétaire puis applique les règles d'accès.
+ * SECTIONS et des SOUS-SECTIONS via l'éditeur. Le HTML référence les
+ * fichiers avec une URL `/api/files/<nom>` ; le serveur retrouve la
+ * formation propriétaire puis applique les règles d'accès.
  *
  * Règles :
  *  - Administrateur : accès global.
@@ -25,18 +26,27 @@ class FileAccessService {
   /**
    * Résoudre la formation propriétaire d'un fichier et déterminer
    * si l'utilisateur peut y accéder.
+   *
+   * Un fichier peut être référencé par `sections.contenu` (rich text de
+   * section) OU `sous_sections.contenu` (rich text de sous-section) :
+   * les deux tables sont interrogées.
    */
   async resolveAccess(filename, user) {
     const chemin = `/api/files/${filename}`;
 
-    const row = await SousSectionRepository.findFormationIdByFileChemin(chemin);
+    const [sousRow, sectionRow] = await Promise.all([
+      SousSectionRepository.findFormationIdByFileChemin(chemin),
+      SectionRepository.findFormationIdByFileChemin(chemin),
+    ]);
+
+    const row = sousRow || sectionRow;
 
     if (!row) {
       return { allowed: false, type: null };
     }
 
     const allowed = await this._canAccessFormation(row.id_formation, user);
-    return { allowed, type: "sous-section" };
+    return { allowed, type: sousRow ? "sous-section" : "section" };
   }
 
   /**

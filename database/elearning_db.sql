@@ -106,7 +106,7 @@ CREATE TABLE questions(
  id_question INT AUTO_INCREMENT PRIMARY KEY,
  id_quiz INT NOT NULL,
  enonce TEXT,
- type ENUM('QCM','LIBRE') NOT NULL DEFAULT 'QCM',
+ type ENUM('QCM') NOT NULL DEFAULT 'QCM',
  points INT NOT NULL DEFAULT 1,
  FOREIGN KEY(id_quiz) REFERENCES quiz(id_quiz)
 );
@@ -124,9 +124,8 @@ CREATE TABLE tentatives(
  id_utilisateur INT NOT NULL,
  id_quiz INT NOT NULL,
  note DECIMAL(5,2),
- statut ENUM('EN_COURS','SOUMISE','A_CORRIGER','REUSSIE','ECHOUEE') NOT NULL DEFAULT 'EN_COURS',
+ statut ENUM('EN_COURS','SOUMISE','REUSSIE','ECHOUEE') NOT NULL DEFAULT 'EN_COURS',
  date_soumission DATETIME NULL,
- date_correction DATETIME NULL,
  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
  FOREIGN KEY(id_utilisateur) REFERENCES utilisateurs(id_utilisateur),
  FOREIGN KEY(id_quiz) REFERENCES quiz(id_quiz)
@@ -137,8 +136,6 @@ CREATE TABLE reponses_etudiants(
  id_tentative INT NOT NULL,
  id_question INT NOT NULL,
  id_reponse INT NULL DEFAULT NULL,
- contenu TEXT NULL,
- note DECIMAL(5,2) NULL,
  INDEX idx_reponses_etu_tentative_question (id_tentative, id_question),
  FOREIGN KEY(id_tentative) REFERENCES tentatives(id_tentative),
  FOREIGN KEY(id_question) REFERENCES questions(id_question),

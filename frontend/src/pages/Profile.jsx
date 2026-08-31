@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import Card from "../components/ui/Card";
-import PageHeader from "../components/ui/PageHeader";
 import Alert from "../components/ui/Alert";
 import FieldError, { FormAlert } from "../components/ui/FieldError";
 import { RoleBadge } from "../components/ui/Badge";
@@ -42,8 +41,11 @@ export default function Profile() {
   };
 
   return (
-    <div className="mx-auto max-w-3xl">
-      <PageHeader title="Mon profil" subtitle="Informations du compte et mot de passe" />
+    <div className="mx-auto max-w-3xl space-y-6">
+      <div>
+        <h1 className="page-title">Mon profil</h1>
+        <p className="page-subtitle">Informations du compte et mot de passe</p>
+      </div>
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         <Card className="p-6">

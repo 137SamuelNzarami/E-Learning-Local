@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import PageHeader from "../../components/ui/PageHeader";
 import Card from "../../components/ui/Card";
 import Spinner from "../../components/ui/Spinner";
 import Modal from "../../components/ui/Modal";
@@ -17,12 +16,6 @@ import { useOwnedFormations } from "../../hooks/useOwnedFormations";
 import { getErrorMessage } from "../../utils/format";
 import { Icons } from "../../components/Icons";
 
-/**
- * Gestion des quiz par CHAPITRE (backend : un seul quiz par chapitre).
- * - QCM   : cocher toutes les réponses correctes (correction auto serveur) ;
- * - LIBRE : pas d'options → correction manuelle par le formateur.
- * Écriture des réponses : champ `texte` (lecture : colonne `contenu`).
- */
 export default function FormateurQuizzes() {
   const [searchParams] = useSearchParams();
   const chapitrePreselect = Number(searchParams.get("chapitre")) || null;
@@ -82,9 +75,7 @@ export default function FormateurQuizzes() {
         if (!cancelled) setLoadingChapters(false);
       }
     })();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [formations]);
 
   useEffect(() => {
@@ -123,11 +114,7 @@ export default function FormateurQuizzes() {
     if (open) return;
     const quiz = quizzesByChapter[chapter.id_chapitre];
     if (quiz && !questionsByQuiz[quiz.id_quiz]) {
-      try {
-        await loadQuestions(quiz.id_quiz);
-      } catch (err) {
-        setError(err);
-      }
+      try { await loadQuestions(quiz.id_quiz); } catch (err) { setError(err); }
     }
   };
 
@@ -139,29 +126,18 @@ export default function FormateurQuizzes() {
       const payload = { titre: quizForm.titre, score_reussite: Number(quizForm.score_reussite) };
       let saved;
       if (quizModal.item) {
-        // update : le backend renvoie la ligne complète
         saved = await quizService.update(quizModal.item.id_quiz, payload);
       } else {
-        // create : le backend renvoie { id } -> on recharge la ligne complète
-        const created = await quizService.store({
-          ...payload,
-          id_chapitre: Number(quizModal.id_chapitre),
-        });
+        const created = await quizService.store({ ...payload, id_chapitre: Number(quizModal.id_chapitre) });
         saved = await quizService.show(created.data.id);
       }
-      const idChapitre = Number(
-        quizModal.item ? quizModal.item.id_chapitre : quizModal.id_chapitre,
-      );
+      const idChapitre = Number(quizModal.item ? quizModal.item.id_chapitre : quizModal.id_chapitre);
       setQuizzesByChapter((m) => ({ ...m, [idChapitre]: saved.data }));
       setChapters((cs) => cs.map((c) => (c.id_chapitre === idChapitre ? { ...c, a_quiz: true } : c)));
       setNotice("Quiz enregistré.");
       setQuizModal(null);
       await loadQuestions(saved.data.id_quiz);
-    } catch (err) {
-      setQuizError(err);
-    } finally {
-      setBusy(false);
-    }
+    } catch (err) { setQuizError(err); } finally { setBusy(false); }
   };
 
   const saveQuestion = async (e) => {
@@ -171,24 +147,15 @@ export default function FormateurQuizzes() {
     try {
       const base = { enonce: questionForm.enonce, points: Number(questionForm.points) };
       if (questionModal.item) {
-        // type immuable côté backend → jamais renvoyé en update
         await questionServiceExtended.update(questionModal.item.id_question, base);
       } else {
-        await questionServiceExtended.store({
-          ...base,
-          type: questionForm.type,
-          id_quiz: questionModal.id_quiz,
-        });
+        await questionServiceExtended.store({ ...base, type: questionForm.type, id_quiz: questionModal.id_quiz });
       }
       setNotice("Question enregistrée.");
       const idQuiz = questionModal.id_quiz;
       setQuestionModal(null);
       await loadQuestions(idQuiz);
-    } catch (err) {
-      setQuestionError(err);
-    } finally {
-      setBusy(false);
-    }
+    } catch (err) { setQuestionError(err); } finally { setBusy(false); }
   };
 
   const saveAnswer = async (e) => {
@@ -202,16 +169,10 @@ export default function FormateurQuizzes() {
         est_correcte: answerForm.est_correcte,
       });
       setNotice("Réponse ajoutée.");
-      const question = Object.values(questionsByQuiz)
-        .flat()
-        .find((q) => q.id_question === answerModal.id_question);
+      const question = Object.values(questionsByQuiz).flat().find((q) => q.id_question === answerModal.id_question);
       setAnswerModal(null);
       if (question) await loadQuestions(question.id_quiz);
-    } catch (err) {
-      setAnswerError(err);
-    } finally {
-      setBusy(false);
-    }
+    } catch (err) { setAnswerError(err); } finally { setBusy(false); }
   };
 
   const confirmDelete = async () => {
@@ -220,14 +181,8 @@ export default function FormateurQuizzes() {
       const { type, item } = deleting;
       if (type === "quiz") {
         await quizService.destroy(item.id_quiz);
-        setQuizzesByChapter((m) => {
-          const next = { ...m };
-          delete next[item.id_chapitre];
-          return next;
-        });
-        setChapters((cs) =>
-          cs.map((c) => (c.id_chapitre === item.id_chapitre ? { ...c, a_quiz: false } : c)),
-        );
+        setQuizzesByChapter((m) => { const next = { ...m }; delete next[item.id_chapitre]; return next; });
+        setChapters((cs) => cs.map((c) => (c.id_chapitre === item.id_chapitre ? { ...c, a_quiz: false } : c)));
       } else if (type === "question") {
         await questionServiceExtended.destroy(item.id_question);
         await loadQuestions(deleting.idQuiz);
@@ -237,34 +192,44 @@ export default function FormateurQuizzes() {
       }
       setNotice("Supprimé.");
       setDeleting(null);
-    } catch (err) {
-      setError(err);
-      setDeleting(null);
-    } finally {
-      setBusy(false);
-    }
+    } catch (err) { setError(err); setDeleting(null); } finally { setBusy(false); }
   };
 
-  if ((loadingChapters || loadingQuizzes) && chapters.length === 0) return <Spinner />;
+  if ((loadingChapters || loadingQuizzes) && chapters.length === 0) return <div className="p-8"><Spinner /></div>;
+
+  const quizCount = Object.keys(quizzesByChapter).length;
 
   return (
-    <div>
-      <PageHeader title="Quiz" subtitle="Un quiz par chapitre — QCM auto-corrigés ou questions libres" />
+    <div className="space-y-6">
+      <div>
+        <h1 className="page-title">Quiz</h1>
+        <p className="page-subtitle">Un quiz par chapitre — QCM à correction automatique</p>
+      </div>
 
-      {notice && <Alert type="success" className="mb-4" title={notice} />}
-      {error && <Alert type="error" className="mb-4" title={getErrorMessage(error)} />}
+      {notice && (
+        <div className="animate-slide-up rounded-xl border border-success-200 bg-success-50 p-3 text-sm font-medium text-success-700">{notice}</div>
+      )}
+      {error && <Alert type="error" title={getErrorMessage(error)} />}
+
       {!error && chapters.length === 0 && (
         <Card>
           <EmptyState
             title="Aucun chapitre"
             message="Créez d'abord une formation avec des chapitres depuis « Mes formations »."
-            action={
-              <Link to="/formateur/formations" className="btn-primary">
-                Mes formations
-              </Link>
-            }
+            action={<Link to="/formateur/formations" className="btn-primary">Mes formations</Link>}
           />
         </Card>
+      )}
+
+      {chapters.length > 0 && (
+        <div className="flex flex-wrap gap-2 text-sm">
+          <div className="flex items-center gap-2 rounded-xl bg-slate-100 px-4 py-2 font-medium text-slate-600">
+            <Icons.book className="h-4 w-4" /> {chapters.length} chapitre{chapters.length > 1 ? "s" : ""}
+          </div>
+          <div className="flex items-center gap-2 rounded-xl bg-brand-50 px-4 py-2 font-medium text-brand-700">
+            <Icons.quiz className="h-4 w-4" /> {quizCount} quiz
+          </div>
+        </div>
       )}
 
       <div className="space-y-3">
@@ -274,9 +239,7 @@ export default function FormateurQuizzes() {
             chapter={chapter}
             quiz={quizzesByChapter[chapter.id_chapitre]}
             open={expanded === chapter.id_chapitre}
-            questions={quizzesByChapter[chapter.id_chapitre]
-              ? questionsByQuiz[quizzesByChapter[chapter.id_chapitre].id_quiz] || []
-              : []}
+            questions={quizzesByChapter[chapter.id_chapitre] ? questionsByQuiz[quizzesByChapter[chapter.id_chapitre].id_quiz] || [] : []}
             answersByQuestion={answersByQuestion}
             onToggle={() => toggleExpand(chapter)}
             onCreateQuiz={() => {
@@ -307,16 +270,8 @@ export default function FormateurQuizzes() {
         ))}
       </div>
 
-      {/* MODALES */}
-      <Modal
-        open={Boolean(quizModal)}
-        onClose={() => setQuizModal(null)}
-        title={quizModal?.item ? "Paramètres du quiz" : "Nouveau quiz"}
-        footer={
-          <button type="submit" form="quiz-form" className="btn-primary" disabled={busy}>
-            {busy ? "Enregistrement..." : "Enregistrer"}
-          </button>
-        }
+      <Modal open={Boolean(quizModal)} onClose={() => setQuizModal(null)} title={quizModal?.item ? "Paramètres du quiz" : "Nouveau quiz"}
+        footer={<button type="submit" form="quiz-form" className="btn-primary" disabled={busy}>{busy ? "Enregistrement..." : "Enregistrer"}</button>}
       >
         <FormAlert error={quizError} />
         <form id="quiz-form" onSubmit={saveQuiz} className="space-y-4">
@@ -327,28 +282,15 @@ export default function FormateurQuizzes() {
           </div>
           <div>
             <label className="label">Seuil de réussite (%)</label>
-            <input
-              className="input"
-              type="number"
-              min={0}
-              max={100}
-              value={quizForm.score_reussite}
-              onChange={(e) => setQuizForm({ ...quizForm, score_reussite: e.target.value })}
-            />
+            <input className="input" type="number" min={0} max={100} value={quizForm.score_reussite}
+              onChange={(e) => setQuizForm({ ...quizForm, score_reussite: e.target.value })} />
             <FieldError error={quizError} name="score_reussite" />
           </div>
         </form>
       </Modal>
 
-      <Modal
-        open={Boolean(questionModal)}
-        onClose={() => setQuestionModal(null)}
-        title={questionModal?.item ? "Modifier la question" : "Nouvelle question"}
-        footer={
-          <button type="submit" form="question-form" className="btn-primary" disabled={busy}>
-            {busy ? "Enregistrement..." : "Enregistrer"}
-          </button>
-        }
+      <Modal open={Boolean(questionModal)} onClose={() => setQuestionModal(null)} title={questionModal?.item ? "Modifier la question" : "Nouvelle question"}
+        footer={<button type="submit" form="question-form" className="btn-primary" disabled={busy}>{busy ? "Enregistrement..." : "Enregistrer"}</button>}
       >
         <FormAlert error={questionError} />
         <form id="question-form" onSubmit={saveQuestion} className="space-y-4">
@@ -357,40 +299,21 @@ export default function FormateurQuizzes() {
             <textarea className="input" rows={3} value={questionForm.enonce} onChange={(e) => setQuestionForm({ ...questionForm, enonce: e.target.value })} />
             <FieldError error={questionError} name="enonce" />
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="label">Type</label>
-              <select
-                className="input"
-                value={questionForm.type}
-                disabled={Boolean(questionModal?.item)}
-                onChange={(e) => setQuestionForm({ ...questionForm, type: e.target.value })}
-              >
-                <option value="QCM">QCM</option>
-                <option value="LIBRE">Réponse libre</option>
-              </select>
-              {questionModal?.item && (
-                <p className="mt-1 text-xs text-slate-400">Le type n'est plus modifiable.</p>
-              )}
-            </div>
-            <div>
-              <label className="label">Points</label>
-              <input className="input" type="number" min={1} value={questionForm.points} onChange={(e) => setQuestionForm({ ...questionForm, points: e.target.value })} />
-              <FieldError error={questionError} name="points" />
-            </div>
+          <div className="flex items-center gap-2">
+            <Badge tone="sky">QCM</Badge>
+            <p className="text-xs text-slate-400">Choix multiple — correction automatique.</p>
+          </div>
+          <div>
+            <label className="label">Points</label>
+            <input className="input" type="number" min={1} value={questionForm.points}
+              onChange={(e) => setQuestionForm({ ...questionForm, points: e.target.value })} />
+            <FieldError error={questionError} name="points" />
           </div>
         </form>
       </Modal>
 
-      <Modal
-        open={Boolean(answerModal)}
-        onClose={() => setAnswerModal(null)}
-        title="Nouvelle réponse"
-        footer={
-          <button type="submit" form="answer-form" className="btn-primary" disabled={busy}>
-            {busy ? "Enregistrement..." : "Ajouter"}
-          </button>
-        }
+      <Modal open={Boolean(answerModal)} onClose={() => setAnswerModal(null)} title="Nouvelle réponse"
+        footer={<button type="submit" form="answer-form" className="btn-primary" disabled={busy}>{busy ? "Enregistrement..." : "Ajouter"}</button>}
       >
         <FormAlert error={answerError} />
         <form id="answer-form" onSubmit={saveAnswer} className="space-y-4">
@@ -400,60 +323,34 @@ export default function FormateurQuizzes() {
             <FieldError error={answerError} name="texte" />
           </div>
           <label className="flex items-center gap-2 text-sm text-slate-700">
-            <input
-              type="checkbox"
-              className="h-4 w-4 rounded border-slate-300 text-brand-600"
-              checked={answerForm.est_correcte}
-              onChange={(e) => setAnswerForm({ ...answerForm, est_correcte: e.target.checked })}
-            />
+            <input type="checkbox" className="h-4 w-4 rounded border-slate-300 text-brand-600"
+              checked={answerForm.est_correcte} onChange={(e) => setAnswerForm({ ...answerForm, est_correcte: e.target.checked })} />
             Réponse correcte (plusieurs cochages possibles pour un QCM multi-sélection)
           </label>
         </form>
       </Modal>
 
-      <ConfirmDialog
-        open={Boolean(deleting)}
-        onClose={() => setDeleting(null)}
-        onConfirm={confirmDelete}
-        busy={busy}
+      <ConfirmDialog open={Boolean(deleting)} onClose={() => setDeleting(null)} onConfirm={confirmDelete} busy={busy}
         title="Supprimer cet élément ?"
-        message={
-          deleting?.type === "quiz"
-            ? "Les questions et réponses associées seront également supprimées."
-            : undefined
-        }
+        message={deleting?.type === "quiz" ? "Les questions et réponses associées seront également supprimées." : undefined}
       />
     </div>
   );
 }
 
 function ChapterQuizRow(props) {
-  const {
-    chapter,
-    quiz,
-    open,
-    questions,
-    answersByQuestion,
-    onToggle,
-    onCreateQuiz,
-    onEditQuiz,
-    onDeleteQuiz,
-    onDeleteQuestion,
-    onDeleteAnswer,
-    onAddQuestion,
-    onAddAnswer,
-  } = props;
+  const { chapter, quiz, open, questions, answersByQuestion, onToggle, onCreateQuiz, onEditQuiz, onDeleteQuiz, onDeleteQuestion, onDeleteAnswer, onAddQuestion, onAddAnswer } = props;
 
   return (
-    <Card className="overflow-hidden">
+    <Card className="overflow-hidden" padding={false}>
       <div className="flex flex-wrap items-center justify-between gap-3 p-4">
         <div className="flex min-w-0 items-center gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-600">
-            <Icons.quiz />
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600">
+            <Icons.quiz className="h-5 w-5" />
           </span>
           <div className="min-w-0">
-            <p className="truncate font-semibold text-slate-900">{chapter.titre}</p>
-            <p className="text-xs text-slate-400">{chapter.formationTitre}</p>
+            <p className="truncate font-semibold text-slate-800">{chapter.titre}</p>
+            <p className="text-[11px] text-slate-400">{chapter.formationTitre}</p>
           </div>
           {quiz ? (
             <Badge tone="info">{quiz.titre} · seuil {Number(quiz.score_reussite)}%</Badge>
@@ -461,29 +358,21 @@ function ChapterQuizRow(props) {
             <Badge tone="neutral">Pas de quiz</Badge>
           )}
         </div>
-        <div className="flex items-center gap-2">
-          <button type="button" className="btn-secondary !px-3 !py-1.5 !text-xs" onClick={onToggle}>
+        <div className="flex items-center gap-1.5">
+          <button type="button" className="btn-secondary btn-sm" onClick={onToggle}>
             {open ? "Réduire" : "Gérer"}
           </button>
           {quiz ? (
             <>
-              <Link to={`/formateur/corrections?quiz=${quiz.id_quiz}`} className="btn-secondary !px-3 !py-1.5 !text-xs">
-                Corrections
-              </Link>
-              <button type="button" className="btn-secondary !px-3 !py-1.5 !text-xs" onClick={onEditQuiz}>
-                Paramètres
-              </button>
-              <button
-                type="button"
-                className="btn-ghost !px-2 !py-1 !text-xs text-red-600 hover:bg-red-50"
-                onClick={() => onDeleteQuiz({ ...quiz, id_chapitre: chapter.id_chapitre })}
-              >
-                Supprimer
+              <button type="button" className="btn-secondary btn-sm" onClick={onEditQuiz}>Paramètres</button>
+              <button type="button" className="btn-ghost btn-sm !text-danger-500 hover:!bg-danger-50"
+                onClick={() => onDeleteQuiz({ ...quiz, id_chapitre: chapter.id_chapitre })}>
+                <Icons.trash className="h-3 w-3" />
               </button>
             </>
           ) : (
-            <button type="button" className="btn-primary !px-3 !py-1.5 !text-xs" onClick={onCreateQuiz}>
-              + Créer le quiz
+            <button type="button" className="btn-primary btn-sm" onClick={onCreateQuiz}>
+              <Icons.plus className="h-3 w-3" /> Créer le quiz
             </button>
           )}
         </div>
@@ -492,16 +381,16 @@ function ChapterQuizRow(props) {
       {open && quiz && (
         <div className="border-t border-slate-100 p-4">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-            <p className="text-sm text-slate-500">
+            <p className="text-sm font-medium text-slate-500">
               {questions.length} question{questions.length > 1 ? "s" : ""}
             </p>
-            <button type="button" className="btn-primary !px-3 !py-1.5 !text-xs" onClick={onAddQuestion}>
-              + Question
+            <button type="button" className="btn-primary btn-sm" onClick={onAddQuestion}>
+              <Icons.plus className="h-3 w-3" /> Question
             </button>
           </div>
 
           {questions.length === 0 && (
-            <p className="rounded-lg bg-slate-50 px-4 py-6 text-center text-sm text-slate-400">
+            <p className="rounded-xl bg-slate-50 px-4 py-6 text-center text-sm text-slate-400">
               Ajoutez au moins une question pour que l'étudiant puisse valider ce chapitre.
             </p>
           )}
@@ -512,60 +401,36 @@ function ChapterQuizRow(props) {
               return (
                 <div key={question.id_question} className="rounded-xl border border-slate-100 p-4">
                   <div className="flex flex-wrap items-start justify-between gap-2">
-                    <p className="font-medium text-slate-800">
+                    <p className="text-sm font-semibold text-slate-800">
                       <span className="mr-2 text-brand-600">Q{idx + 1}.</span>
                       {question.enonce}
                     </p>
                     <div className="flex shrink-0 items-center gap-2">
-                      <Badge tone={question.type === "LIBRE" ? "violet" : "sky"}>
-                        {question.type === "LIBRE" ? "Libre" : "QCM"} · {Number(question.points)} pt{Number(question.points) > 1 ? "s" : ""}
-                      </Badge>
-                      {question.type === "QCM" && (
-                        <button
-                          type="button"
-                          className="btn-secondary !px-2.5 !py-1 !text-xs"
-                          onClick={() => onAddAnswer(question.id_question)}
-                        >
-                          + Réponse
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        className="btn-ghost !px-2 !py-1 !text-xs text-red-600 hover:bg-red-50"
-                        onClick={() => onDeleteQuestion(question, quiz.id_quiz)}
-                      >
-                        Supprimer
+                      <Badge tone="sky">QCM · {Number(question.points)} pt{Number(question.points) > 1 ? "s" : ""}</Badge>
+                      <button type="button" className="btn-secondary btn-sm" onClick={() => onAddAnswer(question.id_question)}>
+                        <Icons.plus className="h-3 w-3" /> Réponse
+                      </button>
+                      <button type="button" className="btn-ghost btn-sm !text-danger-500 hover:!bg-danger-50"
+                        onClick={() => onDeleteQuestion(question, quiz.id_quiz)}>
+                        <Icons.trash className="h-3 w-3" />
                       </button>
                     </div>
                   </div>
-                  {question.type === "LIBRE" ? (
-                    <p className="mt-3 rounded-lg bg-violet-50 px-3 py-2 text-xs text-violet-700">
-                      Question libre : l'étudiant rédige sa réponse, vous la notez manuellement dans « Corrections ».
-                    </p>
-                  ) : (
-                    <ul className="mt-3 space-y-1.5">
-                      {answers.length === 0 && <li className="text-sm text-slate-400">Aucune réponse.</li>}
-                      {answers.map((a) => (
-                        <li key={a.id_reponse} className="flex items-center justify-between gap-3 rounded-lg bg-slate-50 px-3 py-2">
-                          <div className="flex items-center gap-2">
-                            {a.est_correcte ? (
-                              <Badge tone="success">Correcte</Badge>
-                            ) : (
-                              <Badge tone="neutral">Fausse</Badge>
-                            )}
-                            <p className="text-sm text-slate-700">{a.contenu ?? a.texte}</p>
-                          </div>
-                          <button
-                            type="button"
-                            className="btn-ghost !px-2 !py-1 !text-xs text-red-600 hover:bg-red-50"
-                            onClick={() => onDeleteAnswer(a, quiz.id_quiz)}
-                          >
-                            Supprimer
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
+                  <ul className="mt-3 space-y-1.5">
+                    {answers.length === 0 && <li className="text-sm text-slate-400">Aucune réponse.</li>}
+                    {answers.map((a) => (
+                      <li key={a.id_reponse} className="flex items-center justify-between gap-3 rounded-lg bg-slate-50 px-3 py-2">
+                        <div className="flex items-center gap-2">
+                          {a.est_correcte ? <Badge tone="success">Correcte</Badge> : <Badge tone="neutral">Fausse</Badge>}
+                          <p className="text-sm text-slate-700">{a.contenu ?? a.texte}</p>
+                        </div>
+                        <button type="button" className="btn-ghost btn-sm !text-danger-500 hover:!bg-danger-50"
+                          onClick={() => onDeleteAnswer(a, quiz.id_quiz)}>
+                          <Icons.trash className="h-3 w-3" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               );
             })}

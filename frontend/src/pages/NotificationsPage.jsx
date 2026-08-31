@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
-import PageHeader from "../components/ui/PageHeader";
 import Card from "../components/ui/Card";
 import Badge from "../components/ui/Badge";
 import Spinner from "../components/ui/Spinner";
@@ -35,18 +34,18 @@ export default function NotificationsPage() {
   };
 
   return (
-    <div className="mx-auto max-w-3xl">
-      <PageHeader
-        title="Notifications"
-        subtitle="Vos notifications personnelles"
-        actions={
-          notifications.some((n) => !n.lu) ? (
-            <button type="button" className="btn-secondary" onClick={markAllRead}>
-              Tout marquer comme lu
-            </button>
-          ) : null
-        }
-      />
+    <div className="mx-auto max-w-3xl space-y-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="page-title">Notifications</h1>
+          <p className="page-subtitle">Vos notifications personnelles</p>
+        </div>
+        {notifications.some((n) => !n.lu) && (
+          <button type="button" className="btn-secondary" onClick={markAllRead}>
+            Tout marquer comme lu
+          </button>
+        )}
+      </div>
 
       {loading ? (
         <Spinner />
@@ -55,20 +54,27 @@ export default function NotificationsPage() {
       ) : (
         <div className="space-y-3">
           {notifications.map((n) => (
-            <Card key={n.id_notification} className="flex items-start justify-between gap-4 p-4">
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <p className={`font-semibold ${n.lu ? "text-slate-600" : "text-slate-900"}`}>{n.titre}</p>
-                  {!n.lu && <Badge color="brand">Nouveau</Badge>}
+            <Card key={n.id_notification} padding={false} className="overflow-hidden">
+              <div className={`flex items-start gap-4 px-5 py-4 transition-base hover:bg-slate-50/50 ${!n.lu ? "bg-brand-50/30" : ""}`}>
+                <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
+                  !n.lu ? "bg-brand-100 text-brand-600" : "bg-slate-100 text-slate-400"
+                }`}>
+                  <Icons.notifications className="h-5 w-5" />
                 </div>
-                <p className="mt-1 text-sm text-slate-600">{n.contenu}</p>
-                <p className="mt-2 text-xs text-slate-400">{formatDateTime(n.created_at)}</p>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className={`text-sm font-semibold ${n.lu ? "text-slate-600" : "text-slate-800"}`}>{n.titre}</p>
+                    {!n.lu && <Badge tone="info">Nouveau</Badge>}
+                  </div>
+                  <p className="mt-1 text-sm leading-relaxed text-slate-600">{n.contenu}</p>
+                  <p className="mt-1.5 text-[11px] text-slate-400">{formatDateTime(n.created_at)}</p>
+                </div>
+                {!n.lu && (
+                  <button type="button" className="btn-secondary btn-sm shrink-0" onClick={() => markRead(n.id_notification)}>
+                    Marquer lu
+                  </button>
+                )}
               </div>
-              {!n.lu && (
-                <button type="button" className="btn-secondary !px-3 !py-1.5 !text-xs shrink-0" onClick={() => markRead(n.id_notification)}>
-                  Marquer lu
-                </button>
-              )}
             </Card>
           ))}
         </div>

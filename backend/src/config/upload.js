@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import multer from "multer";
 
 import { env } from "./env.js";
+import UPLOAD from "../constants/upload.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -20,12 +21,26 @@ export const uploadDir = path.resolve(
 );
 
 /**
- * Configuration Multer (PHASE 4 — uploads).
- *
- * - Stockage disque dans `UPLOAD_PATH`.
- * - Nom de fichier : horodatage + nom d'origine assaini + extension.
- * - Taille maximale : 100 Mo (vidéos et documents).
+ * Types MIME acceptés = union des trois familles (image/vidéo/document),
+ * alignés EXACTEMENT sur `constants/upload.js` (source unique de vérité).
  */
+export const acceptedMimeTypes = new Set([
+  ...UPLOAD.IMAGE_MIME_TYPES,
+  ...UPLOAD.VIDEO_MIME_TYPES,
+  ...UPLOAD.DOCUMENT_MIME_TYPES,
+]);
+
+const FILE_FILTER_ERROR =
+  "Type de fichier non autorisé. Formats acceptés : images (jpg, jpeg, png, webp), vidéos (mp4, webm, ogg, mov, mkv, avi) et documents (pdf, doc, docx, ppt, pptx, xls, xlsx, txt, md).";
+
+const fileFilter = (req, file, cb) => {
+  if (acceptedMimeTypes.has(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error(FILE_FILTER_ERROR));
+  }
+};
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, uploadDir);
@@ -41,60 +56,49 @@ const storage = multer.diskStorage({
 });
 
 /**
- * Types MIME acceptés.
- *
- * Vidéos : mp4, webm, ogg, mov, mkv, avi
- * Documents : pdf, doc, docx, ppt, pptx, xls, xlsx, txt, md
- */
-export const acceptedMimeTypes = new Set([
-  "video/mp4",
-  "video/webm",
-  "video/ogg",
-  "video/quicktime",
-  "video/x-msvideo",
-  "video/x-matroska",
-  "application/pdf",
-  "application/msword",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  "application/vnd.ms-powerpoint",
-  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-  "application/vnd.ms-excel",
-  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  "text/plain",
-  "text/markdown",
-]);
-
-const fileFilter = (req, file, cb) => {
-  if (acceptedMimeTypes.has(file.mimetype)) {
-    cb(null, true);
-  } else {
-    cb(
-      new Error(
-        "Type de fichier non autorisé. Formats acceptés : vidéos (mp4, webm, ogg, mov, mkv, avi) et documents (pdf, doc, docx, ppt, pptx, xls, xlsx, txt, md).",
-      ),
-    );
-  }
-};
-
-/**
  * Middleware d'upload générique : un seul fichier dans le champ `fichier`.
+ *
+ * La limite multer (`fileSize`) est le maximum GLOBAL des trois familles ;
+ * la limite spécifique à chaque type (image 5 Mo, vidéo 500 Mo, document
+ * 20 Mo) est ensuite vérifiée par `assertTypeSize` après réception du
+ * fichier (multer ne peut pas appliquer une taille différente par MIME).
  */
 export const uploadSingle = multer({
   storage,
   fileFilter,
   limits: {
-    fileSize: 100 * 1024 * 1024, // 100 Mo
+    fileSize: UPLOAD.MAX_FILE_SIZE,
   },
 }).single("fichier");
 
 /**
- * Middleware d'upload du fichier de consignes d'un devoir :
- * un seul fichier dans le champ `fichier_consignes`.
+ * Famille média associée à un MIME ('image' | 'video' | 'document').
  */
-export const uploadConsignes = multer({
-  storage,
-  fileFilter,
-  limits: {
-    fileSize: 100 * 1024 * 1024, // 100 Mo
-  },
-}).single("fichier_consignes");
+export function getUploadMeta(mimetype) {
+  if (UPLOAD.IMAGE_MIME_TYPES.includes(mimetype)) {
+    return { type: "image", maxSize: UPLOAD.MAX_IMAGE_SIZE };
+  }
+  if (UPLOAD.VIDEO_MIME_TYPES.includes(mimetype)) {
+    return { type: "video", maxSize: UPLOAD.MAX_VIDEO_SIZE };
+  }
+  return { type: "document", maxSize: UPLOAD.MAX_DOCUMENT_SIZE };
+}
+
+/**
+ * Valide la taille d'un fichier reçu contre la limite de sa famille.
+ * À appeler APRES `uploadSingle` (multer ne connaît qu'une limite globale).
+ * Retourne la famille ; lève une erreur si le fichier dépasse la limite.
+ */
+export function assertTypeSize(file) {
+  const meta = getUploadMeta(file.mimetype);
+  if (file.size > meta.maxSize) {
+    const err = new Error(
+      `Fichier trop volumineux pour un ${meta.type} (maximum ${Math.round(
+        meta.maxSize / 1024 / 1024,
+      )} Mo).`,
+    );
+    err.code = "FILE_TOO_LARGE";
+    throw err;
+  }
+  return meta.type;
+}

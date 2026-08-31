@@ -7,14 +7,14 @@
  *
  *  1. Le formateur construit le contenu : formation (puis publication),
  *     2 chapitres, sections, sous-sections (RICH TEXT), quiz du
- *     chapitre 1 (questions QCM + LIBRE) et réponses.
+ *     chapitre 1 (question QCM) et réponses.
  *  2. L'étudiant s'inscrit : le chapitre 1 est accessible, le chapitre 2
  *     est VERROUILLÉ tant que le quiz 1 n'est pas réussi. Le corrigé
  *     (est_correcte) n'est JAMAIS exposé.
- *  3. L'étudiant passe le quiz : QCM auto-corrigé + réponse libre ->
- *     tentative A_CORRIGER ; le formateur est notifié.
- *  4. Le formateur corrige la réponse libre -> note finale recalculée
- *     côté serveur, l'étudiant est notifié.
+ *  3. L'étudiant passe le quiz : correction 100 % automatique (QCM) ->
+ *     tentative REUSSIE/ECHOUEE immédiatement, aucune correction manuelle.
+ *  4. Relecture des réponses : le formateur voit le corrigé, l'étudiant
+ *     ne le voit jamais.
  *  5. Après réussite : progression mise à jour et chapitre 2 débloqué.
  *  6. Cloisonnement : IDOR sur tentatives/réponses, corrigé masqué pour
  *     un étudiant tiers, conversation automatique par inscription.
@@ -181,7 +181,7 @@ async function main() {
   check(ss1.status === 200, "POST /sous-sections (rich text) -> 200");
   const idSS1 = ss1.body?.data?.id;
 
-  // Quiz du chapitre 1 : 1 question QCM + 1 question LIBRE
+  // Quiz du chapitre 1 : une question QCM (correction automatique)
   const quiz1 = await call("POST", "/api/quizzes", {
     token: F,
     body: {
@@ -207,6 +207,7 @@ async function main() {
   check(qcm.status === 200, "POST /questions (QCM) -> 200");
   const idQcm = qcm.body?.data?.id;
 
+  // Le type LIBRE n'existe plus : rejeté par le validateur
   const libre = await call("POST", "/api/questions", {
     token: F,
     body: {
@@ -216,8 +217,7 @@ async function main() {
       points: 1,
     },
   });
-  check(libre.status === 200, "POST /questions (LIBRE) -> 200");
-  const idLibre = libre.body?.data?.id;
+  check(libre.status === 422 || libre.status === 400, "POST /questions (LIBRE) -> refusé");
 
   const rOk = await call("POST", "/api/answers", {
     token: F,
@@ -303,7 +303,7 @@ async function main() {
   const idTentative = start.body?.data?.tentative?.id_tentative;
   check(!!idTentative, "la réponse contient une tentative EN_COURS");
   check(
-    (start.body?.data?.questions ?? []).length === 2 &&
+    (start.body?.data?.questions ?? []).length === 1 &&
       (start.body?.data?.questions ?? []).every((q) =>
         (q.reponses ?? []).every((r) => r.est_correcte === undefined),
       ),
@@ -320,34 +320,22 @@ async function main() {
   // Soumission incomplète refusée
   const incomplet = await call("POST", `/api/attempts/${idTentative}/submit`, {
     token: S,
-    body: { reponses: [{ id_question: idQcm, id_reponses: [Number(idRepOk)] }] },
+    body: { reponses: [] },
   });
   check(incomplet.status === 409, "soumission incomplète -> 409");
 
-  // Soumission complète : QCM correct + texte libre -> A_CORRIGER
+  // Soumission complète et correcte : QCM -> REUSSIE immédiatement
   const submit = await call("POST", `/api/attempts/${idTentative}/submit`, {
     token: S,
     body: {
-      reponses: [
-        { id_question: idQcm, id_reponses: [Number(idRepOk)] },
-        { id_question: idLibre, contenu: "Le point clé numéro 1." },
-      ],
+      reponses: [{ id_question: idQcm, id_reponses: [Number(idRepOk)] }],
     },
   });
   check(submit.status === 200, "POST /attempts/:id/submit -> 200");
   check(
-    submit.body?.data?.statut === "A_CORRIGER" && submit.body?.data?.a_corriger === true,
-    "réponse libre présente -> A_CORRIGER (aucune note inventée)",
+    submit.body?.data?.statut === "REUSSIE" && Number(submit.body?.data?.note) === 100,
+    "correction automatique QCM -> REUSSIE (100 %)",
   );
-  check(
-    submit.body?.data?.note === null,
-    "note absente tant que la correction manuelle n'est pas faite",
-  );
-
-  // Repasser pendant qu'une correction est en attente : autorisé ? Non :
-  // une nouvelle tentative peut démarrer seulement si pas EN_COURS ;
-  // ici A_CORRIGER n'est ni REUSSIE ni EN_COURS → nouveau départ possible.
-  /* (non testé : comportement autorisé, sans impact) */
 
   // IDOR : l'étudiant tiers ne peut pas soumettre la tentative de S
   const idorSubmit = await call("POST", `/api/attempts/${idTentative}/submit`, {
@@ -358,19 +346,20 @@ async function main() {
     "soumission de la tentative d'autrui refusée");
 
   /* ------------------------------------------------------------------ */
-  /* ÉTAPE 4 — Correction manuelle par le formateur                      */
+  /* ÉTAPE 4 — Relecture des réponses (cloisonnement)                    */
   /* ------------------------------------------------------------------ */
 
-  // Vue correction : les réponses de la tentative (formateur)
+  // Vue formateur : les réponses de la tentative avec le corrigé
   const saList = await call("GET", `/api/student-answers/attempt/${idTentative}`, {
     token: F,
   });
   check(saList.status === 200, "GET /student-answers/attempt/:id formateur -> 200");
   const lignes = saList.body?.data ?? [];
-  check(lignes.length === 2, "2 réponses étudiant enregistrées");
-
-  const ligneLibre = lignes.find((l) => l.type_question === "LIBRE");
-  check(!!ligneLibre, "la réponse libre est identifiable");
+  check(lignes.length === 1, "1 réponse étudiant enregistrée");
+  check(
+    (lignes ?? []).length > 0 && (lignes ?? []).every((l) => Boolean(l.est_correcte) === true),
+    "le formateur voit le corrigé (est_correcte)",
+  );
 
   // L'étudiant ne peut pas lire la liste via la vue formateur d'un autre
   const saEtudiant = await call("GET", `/api/student-answers/attempt/${idTentative}`, {
@@ -380,35 +369,6 @@ async function main() {
   check(
     (saEtudiant.body?.data ?? []).every((l) => l.est_correcte === undefined),
     "ses propres réponses restent SANS corrigé pour l'étudiant",
-  );
-
-  // Un étudiant (même inscrit) ne peut pas corriger
-  const corrigerParEtudiant = await call("PATCH", `/api/attempts/${idTentative}/corriger`, {
-    token: S,
-    body: { notes: [] },
-  });
-  check(corrigerParEtudiant.status === 403, "PATCH /corriger par un étudiant -> 403");
-
-  // Note invalide refusée (> points max)
-  const noteInvalide = await call("PATCH", `/api/attempts/${idTentative}/corriger`, {
-    token: F,
-    body: {
-      notes: [{ id_reponse_etudiant: ligneLibre?.id_reponse_etudiant, note: 99 }],
-    },
-  });
-  check(noteInvalide.status === 409, "note hors bornes -> 409");
-
-  // Correction valide : QCM=1pt + libre=1pt → 100 % → REUSSIE
-  const corriger = await call("PATCH", `/api/attempts/${idTentative}/corriger`, {
-    token: F,
-    body: {
-      notes: [{ id_reponse_etudiant: ligneLibre?.id_reponse_etudiant, note: 1 }],
-    },
-  });
-  check(corriger.status === 200, "PATCH /attempts/:id/corriger formateur -> 200");
-  check(
-    corriger.body?.data?.statut === "REUSSIE" && Number(corriger.body?.data?.note) === 100,
-    "correction complète -> REUSSIE (100/100 recalculé serveur)",
   );
 
   /* ------------------------------------------------------------------ */

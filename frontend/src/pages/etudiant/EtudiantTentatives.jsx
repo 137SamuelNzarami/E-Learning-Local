@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
-import PageHeader from "../../components/ui/PageHeader";
 import Card from "../../components/ui/Card";
 import Spinner from "../../components/ui/Spinner";
 import EmptyState from "../../components/ui/EmptyState";
@@ -11,19 +10,33 @@ import { studentAnswerServiceExtended } from "../../services/studentAnswerServic
 import { getErrorMessage, formatDateTime } from "../../utils/format";
 import { Icons } from "../../components/Icons";
 
-/**
- * Historique des tentatives de l'étudiant courant.
- * - Liste : GET /attempts/user/:id (backend force "soi-même" pour un étudiant) ;
- * - Détail : GET /student-answers/attempt/:id.
- * AUCUN score n'est recalculé côté React : on affiche statut + note du backend.
- */
+function StatutBadge({ attempt }) {
+  const note = attempt.note;
+  switch (attempt.statut) {
+    case "REUSSIE":
+      return <Badge tone="success">Réussie{note != null ? ` · ${Math.round(Number(note))}/100` : ""}</Badge>;
+    case "ECHOUEE":
+      return <Badge tone="danger">Échouée{note != null ? ` · ${Math.round(Number(note))}/100` : ""} · à repasser</Badge>;
+    case "EN_COURS":
+      return <Badge tone="info">En cours</Badge>;
+    default:
+      return <Badge>{attempt.statut}</Badge>;
+  }
+}
+
+function NoteChip({ record }) {
+  if (typeof record.est_correcte === "boolean" || typeof record.est_correcte === "number") {
+    return record.est_correcte ? <Badge tone="success">Correcte</Badge> : <Badge tone="danger">Incorrecte</Badge>;
+  }
+  return <Badge>Soumise</Badge>;
+}
+
 export default function EtudiantTentatives() {
   const { user } = useAuth();
   const [attempts, setAttempts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [expanded, setExpanded] = useState(null);
-
   const [answersByAttempt, setAnswersByAttempt] = useState({});
   const [loadingDetail, setLoadingDetail] = useState(false);
 
@@ -33,16 +46,14 @@ export default function EtudiantTentatives() {
       setLoading(true);
       try {
         const res = await attemptServiceExtended.getByUser(user.id);
-        if (!cancelled) setAttempts(res.data || []);
+        if (!cancelled) setAttempts(Array.isArray(res.data) ? res.data : []);
       } catch (err) {
         if (!cancelled) setError(err);
       } finally {
         if (!cancelled) setLoading(false);
       }
     })();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [user.id]);
 
   const openDetail = async (attempt) => {
@@ -60,17 +71,35 @@ export default function EtudiantTentatives() {
     }
   };
 
-  if (loading) return <Spinner />;
+  const passedCount = attempts.filter((a) => a.statut === "REUSSIE").length;
+  const failedCount = attempts.filter((a) => a.statut === "ECHOUEE").length;
+
+  if (loading) return <div className="p-8"><Spinner /></div>;
 
   return (
-    <div>
-      <PageHeader title="Mes résultats" subtitle="Historique de vos tentatives de quiz" />
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-xl font-bold text-slate-800">Mes résultats</h1>
+        <p className="mt-1 text-sm text-slate-500">Historique de vos tentatives de quiz</p>
+      </div>
 
-      {error && <Alert type="error" className="mb-4" title={getErrorMessage(error)} />}
+      {error && <Alert type="error" title={getErrorMessage(error)} />}
+
+      {attempts.length > 0 && (
+        <div className="flex flex-wrap gap-2 text-sm">
+          <div className="flex items-center gap-2 rounded-xl bg-success-50 px-4 py-2 font-medium text-success-700">
+            <Icons.check className="h-4 w-4" /> {passedCount} réussie{passedCount > 1 ? "s" : ""}
+          </div>
+          <div className="flex items-center gap-2 rounded-xl bg-danger-50 px-4 py-2 font-medium text-danger-700">
+            <Icons.xCircle className="h-4 w-4" /> {failedCount} échouée{failedCount > 1 ? "s" : ""}
+          </div>
+        </div>
+      )}
 
       {attempts.length === 0 ? (
         <Card>
           <EmptyState
+            icon={<Icons.quiz className="h-6 w-6" />}
             title="Aucune tentative"
             message="Passez le quiz d'un chapitre depuis votre parcours pour voir vos résultats ici."
           />
@@ -78,73 +107,65 @@ export default function EtudiantTentatives() {
       ) : (
         <div className="space-y-3">
           {attempts.map((a) => {
-            const open = expanded === a.id_tentative;
+            const isOpen = expanded === a.id_tentative;
             const records = answersByAttempt[a.id_tentative];
             return (
-              <Card key={a.id_tentative} className="overflow-hidden">
+              <Card key={a.id_tentative} className="overflow-hidden !p-0">
                 <div className="flex flex-wrap items-center justify-between gap-3 p-4">
                   <div className="flex min-w-0 items-center gap-3">
-                    <span
-                      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
-                        a.statut === "REUSSIE"
-                          ? "bg-green-50 text-green-600"
-                          : a.statut === "ECHOUEE"
-                            ? "bg-red-50 text-red-500"
-                            : a.statut === "A_CORRIGER"
-                              ? "bg-amber-50 text-amber-600"
-                              : "bg-brand-50 text-brand-600"
-                      }`}
-                    >
-                      <Icons.quiz />
+                    <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
+                      a.statut === "REUSSIE" ? "bg-success-50 text-success-600"
+                        : a.statut === "ECHOUEE" ? "bg-danger-50 text-danger-500"
+                          : "bg-brand-50 text-brand-600"
+                    }`}>
+                      <Icons.quiz className="h-5 w-5" />
                     </span>
                     <div className="min-w-0">
-                      <p className="truncate font-semibold text-slate-900">{a.quiz}</p>
-                      <p className="text-xs text-slate-400">
+                      {a.chapitre && (
+                        <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-brand-600">
+                          <Icons.folder className="h-3 w-3" /> {a.chapitre}
+                        </p>
+                      )}
+                      <p className="truncate text-sm font-semibold text-slate-800">{a.quiz || "Quiz"}</p>
+                      <p className="text-[11px] text-slate-400">
+                        {a.formation && <span className="font-medium text-slate-500">{a.formation} · </span>}
                         Tentative #{a.id_tentative}
-                        {a.date_soumission ? ` · ${formatDateTime(a.date_soumission)}` : ""}
-                        {a.date_correction && !a.date_soumission
-                          ? ` · corrigée le ${formatDateTime(a.date_correction)}`
-                          : ""}
+                        {a.date_soumission && <span> · {formatDateTime(a.date_soumission)}</span>}
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
                     <StatutBadge attempt={a} />
-                    <button type="button" className="btn-secondary !px-3 !py-1.5 !text-xs" onClick={() => openDetail(a)}>
-                      {open ? "Réduire" : "Détail"}
+                    <button
+                      type="button"
+                      className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition-base hover:bg-slate-50"
+                      onClick={() => openDetail(a)}
+                    >
+                      {isOpen ? "Réduire" : "Détail"}
                     </button>
                   </div>
                 </div>
 
-                {open && (
+                {isOpen && (
                   <div className="border-t border-slate-100 p-4">
                     {!records ? (
-                      <p className="text-sm text-slate-400">
-                        {loadingDetail ? "Chargement des réponses…" : "Aucun détail disponible."}
-                      </p>
+                      <p className="text-sm text-slate-400">{loadingDetail ? "Chargement des réponses…" : "Aucun détail disponible."}</p>
                     ) : records.length === 0 ? (
                       <p className="text-sm text-slate-400">Aucune réponse enregistrée.</p>
                     ) : (
-                      <>
-                        <p className="mb-2 text-xs text-slate-400">
-                          Le corrigé et les points par question sont communiqués uniquement après correction du formateur.
-                        </p>
-                        <ul className="space-y-2">
-                          {records.map((r) => (
-                            <li key={r.id_reponse_etudiant} className="rounded-lg bg-slate-50 px-3 py-2.5">
-                              <div className="flex flex-wrap items-center justify-between gap-2">
-                                <p className="text-sm font-medium text-slate-800">{r.question}</p>
-                                <NoteChip record={r} />
-                              </div>
-                              <p className="mt-1 whitespace-pre-wrap text-sm text-slate-600">
-                                {r.type_question === "LIBRE"
-                                  ? r.reponse_libre || "(réponse vide)"
-                                  : `Votre choix : ${r.reponse_choisie ?? "—"}`}
-                              </p>
-                            </li>
-                          ))}
-                        </ul>
-                      </>
+                      <ul className="space-y-2">
+                        {records.map((r) => (
+                          <li key={r.id_reponse_etudiant} className="rounded-xl bg-slate-50 px-4 py-3">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <p className="text-sm font-medium text-slate-800">{r.question}</p>
+                              <NoteChip record={r} />
+                            </div>
+                            <p className="mt-1 whitespace-pre-wrap text-sm text-slate-600">
+                              {r.reponse_choisie ? `Votre choix : ${r.reponse_choisie}` : "Réponse soumise"}
+                            </p>
+                          </li>
+                        ))}
+                      </ul>
                     )}
                   </div>
                 )}
@@ -155,47 +176,4 @@ export default function EtudiantTentatives() {
       )}
     </div>
   );
-}
-
-function StatutBadge({ attempt }) {
-  const note = attempt.note;
-  switch (attempt.statut) {
-    case "REUSSIE":
-      return (
-        <Badge tone="success">
-          Réussie{note != null ? ` · ${Math.round(Number(note))}/100` : ""}
-        </Badge>
-      );
-    case "ECHOUEE":
-      return (
-        <Badge tone="danger">
-          Échouée{note != null ? ` · ${Math.round(Number(note))}/100` : ""} · à repasser
-        </Badge>
-      );
-    case "A_CORRIGER":
-      return <Badge tone="warning">Correction en cours</Badge>;
-    case "EN_COURS":
-      return <Badge tone="info">En cours</Badge>;
-    default:
-      return <Badge tone="neutral">{attempt.statut}</Badge>;
-  }
-}
-
-/** est_correcte / note sont masqués pour l'étudiant tant que non corrigé. */
-function NoteChip({ record }) {
-  if (record.type_question === "LIBRE") {
-    return typeof record.note === "number" ? (
-      <Badge tone="success">{Number(record.note)}/{Number(record.points_question)}</Badge>
-    ) : (
-      <Badge tone="warning">À corriger</Badge>
-    );
-  }
-  if (typeof record.est_correcte === "boolean" || typeof record.est_correcte === "number") {
-    return record.est_correcte ? (
-      <Badge tone="success">Correcte</Badge>
-    ) : (
-      <Badge tone="danger">Incorrecte</Badge>
-    );
-  }
-  return <Badge tone="neutral">Soumise</Badge>;
 }

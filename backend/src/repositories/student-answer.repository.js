@@ -3,9 +3,10 @@ import pool from "../config/database.js";
 /**
  * Réponses réellement données par l'étudiant.
  *
- * - Question QCM  : id_reponse renseigné (choix sélectionné), contenu null.
- * - Question LIBRE: contenu renseigné (texte saisi), id_reponse null.
- * - note          : attribuée par le formateur (questions LIBRE uniquement).
+ * Produit QCM uniquement : chaque réponse étudiant référence une ou
+ * plusieurs réponses proposées (id_reponse). La correction est 100 %
+ * automatique côté serveur (aucune correction manuelle de questions
+ * libres dans le produit).
  */
 class StudentAnswerRepository {
   /**
@@ -26,10 +27,7 @@ class StudentAnswerRepository {
 
                 re.id_reponse,
                 r.contenu AS reponse_choisie,
-                r.est_correcte,
-
-                re.contenu AS reponse_libre,
-                re.note
+                r.est_correcte
 
             FROM reponses_etudiants re
 
@@ -66,10 +64,7 @@ class StudentAnswerRepository {
 
                 re.id_reponse,
                 r.contenu AS reponse_choisie,
-                r.est_correcte,
-
-                re.contenu AS reponse_libre,
-                re.note
+                r.est_correcte
 
             FROM reponses_etudiants re
 
@@ -106,10 +101,7 @@ class StudentAnswerRepository {
 
                 re.id_reponse,
                 r.contenu AS reponse_choisie,
-                r.est_correcte,
-
-                re.contenu AS reponse_libre,
-                re.note
+                r.est_correcte
 
             FROM reponses_etudiants re
 
@@ -144,10 +136,7 @@ class StudentAnswerRepository {
 
                 re.id_reponse,
                 r.contenu AS reponse_choisie,
-                r.est_correcte,
-
-                re.contenu AS reponse_libre,
-                re.note
+                r.est_correcte
 
             FROM reponses_etudiants re
 
@@ -167,7 +156,7 @@ class StudentAnswerRepository {
     return rows;
   }
   /**
-   * Créer une réponse étudiant (QCM ou libre)
+   * Créer une réponse étudiant (QCM)
    */
   async create(data) {
     const [result] = await pool.query(
@@ -176,30 +165,18 @@ class StudentAnswerRepository {
             (
                 id_tentative,
                 id_question,
-                id_reponse,
-                contenu
+                id_reponse
             )
-            VALUES (?, ?, ?, ?)
+            VALUES (?, ?, ?)
             `,
       [
         data.id_tentative,
         data.id_question,
         data.id_reponse ?? null,
-        data.contenu ?? null,
       ],
     );
 
     return result.insertId;
-  }
-  /**
-   * Noter une réponse libre (correction formateur)
-   */
-  async grade(id, note) {
-    const [result] = await pool.query(
-      "UPDATE reponses_etudiants SET note = ? WHERE id_reponse_etudiant = ?",
-      [note, id],
-    );
-    return result.affectedRows;
   }
   /**
    * Supprimer les réponses d'une tentative (re-soumission)

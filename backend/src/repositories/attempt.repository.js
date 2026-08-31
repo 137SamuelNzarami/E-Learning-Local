@@ -10,11 +10,21 @@ const SELECT_BASE = `
                 t.id_quiz,
                 q.titre AS quiz,
                 q.score_reussite,
+                ch.id_chapitre,
+                ch.titre AS chapitre,
+                f.id_formation,
+                f.titre AS formation,
                 t.note,
                 t.statut,
                 t.date_soumission,
-                t.date_correction,
                 t.created_at
+`;
+
+const JOIN_APPENDIX = `
+            INNER JOIN chapitres ch
+                ON q.id_chapitre = ch.id_chapitre
+            INNER JOIN formations f
+                ON ch.id_formation = f.id_formation
 `;
 
 class AttemptRepository {
@@ -29,6 +39,7 @@ class AttemptRepository {
                 ON t.id_utilisateur = u.id_utilisateur
             INNER JOIN quiz q
                 ON t.id_quiz = q.id_quiz
+            ${JOIN_APPENDIX}
             ORDER BY t.id_tentative DESC
         `);
 
@@ -46,6 +57,7 @@ class AttemptRepository {
                 ON t.id_utilisateur = u.id_utilisateur
             INNER JOIN quiz q
                 ON t.id_quiz = q.id_quiz
+            ${JOIN_APPENDIX}
             WHERE t.id_tentative = ?
             `,
       [id],
@@ -65,6 +77,7 @@ class AttemptRepository {
                 ON t.id_utilisateur = u.id_utilisateur
             INNER JOIN quiz q
                 ON t.id_quiz = q.id_quiz
+            ${JOIN_APPENDIX}
             WHERE t.id_utilisateur = ?
             ORDER BY t.id_tentative DESC
             `,
@@ -85,6 +98,7 @@ class AttemptRepository {
                 ON t.id_utilisateur = u.id_utilisateur
             INNER JOIN quiz q
                 ON t.id_quiz = q.id_quiz
+            ${JOIN_APPENDIX}
             WHERE t.id_quiz = ?
             ORDER BY t.id_tentative DESC
             `,
@@ -105,6 +119,7 @@ class AttemptRepository {
                 ON t.id_utilisateur = u.id_utilisateur
             INNER JOIN quiz q
                 ON t.id_quiz = q.id_quiz
+            ${JOIN_APPENDIX}
             WHERE t.id_utilisateur = ? AND t.id_quiz = ?
             ORDER BY t.id_tentative ASC
             `,
@@ -125,6 +140,7 @@ class AttemptRepository {
                 ON t.id_utilisateur = u.id_utilisateur
             INNER JOIN quiz q
                 ON t.id_quiz = q.id_quiz
+            ${JOIN_APPENDIX}
             WHERE t.id_utilisateur = ? AND t.id_quiz = ? AND t.statut = 'EN_COURS'
             ORDER BY t.id_tentative DESC
             LIMIT 1
@@ -174,21 +190,6 @@ class AttemptRepository {
       `
             UPDATE tentatives
             SET note = ?, statut = ?, date_soumission = NOW()
-            WHERE id_tentative = ?
-            `,
-      [note, statut, id],
-    );
-
-    return result.affectedRows;
-  }
-  /**
-   * Correction du formateur : note finale + statut + date_correction
-   */
-  async correct(id, { note, statut }) {
-    const [result] = await pool.query(
-      `
-            UPDATE tentatives
-            SET note = ?, statut = ?, date_correction = NOW()
             WHERE id_tentative = ?
             `,
       [note, statut, id],

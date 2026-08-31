@@ -13,7 +13,6 @@ import NotificationService from "./notification.service.js";
 import { handleDatabaseError } from "../utils/database-errors.js";
 import {
   assertPersonalAccess,
-  canGrade,
   canSeeCorrection,
   isAdmin,
   resolveFormation,
@@ -30,18 +29,15 @@ import {
 /**
  * CYCLE DE VIE D'UNE TENTATIVE
  *
- *   EN_COURS ──submit──► SOUMISE (QCM seuls : note immédiate)
- *        │                    ├─ note >= seuil → REUSSIE
- *        │                    └─ note <  seuil → ECHOUEE
- *        │
- *        └──submit──► A_CORRIGER (au moins une question LIBRE)
- *                          │ correction par le formateur propriétaire
- *                          ├─ note >= seuil → REUSSIE
- *                          └─ note <  seuil → ECHOUEE
+ * Toutes les questions sont à choix multiple (QCM) et corrigées AUTOMATIQUEMENT :
+ *
+ *   EN_COURS ──submit──► note >= seuil → REUSSIE
+ *                         note <  seuil → ECHOUEE
  *
  * - La NOTE est TOUJOURS calculée côté serveur (jamais envoyée par le client).
  * - Le corrigé n'est jamais exposé à l'étudiant.
  * - Un quiz échoué peut être repassé : une nouvelle tentative est créée.
+ * - Le type LIBRE (correction manuelle A_CORRIGER) a été retiré du produit.
  */
 class AttemptService {
   /**
@@ -144,7 +140,6 @@ class AttemptService {
           statut: t.statut,
           note: t.note === null ? null : Number(t.note),
           date_soumission: t.date_soumission,
-          date_correction: t.date_correction,
           created_at: t.created_at,
         }),
       ),
@@ -256,15 +251,14 @@ class AttemptService {
    * Body :
    * {
    *   "reponses": [
-   *     { "id_question": 1, "id_reponses": [10] },            // QCM
-   *     { "id_question": 2, "contenu": "Ma réponse..." }      // LIBRE
+   *     { "id_question": 1, "id_reponses": [10] }   // QCM uniquement
    *   ]
    * }
    *
    * - IDOR : seule sa propre tentative EN_COURS peut être soumise ;
    * - chaque question du quiz doit être répondue ;
    * - QCM : correction AUTOMATIQUE (égalité exacte des ensembles) ;
-   * - LIBRE : réponse enregistrée, tentative passée à A_CORRIGER ;
+   * - question non QCM : soumission refusée (type LIBRE retiré du produit) ;
    * - note finale = points obtenus / points totaux × 100.
    */
   async submitAttempt(id_tentative, payload, user) {
@@ -323,63 +317,56 @@ class AttemptService {
 
     const totalPoints = questions.reduce((s, q) => s + q.points, 0);
     let pointsObtenus = 0;
-    let contientLibre = false;
 
     for (const q of questions) {
       const soumise = parQuestion.get(q.id_question);
 
-      if (q.type === "QCM") {
-        const correctes = await AnswerRepository.findByQuestionId(
-          q.id_question,
+      if (q.type !== "QCM") {
+        throw new ConflictError(
+          `La question ${q.id_question} n'est pas à choix multiple : le type LIBRE n'est plus pris en charge.`,
         );
+      }
 
-        const idsCorrectes = correctes
-          .filter((r) => !!r.est_correcte)
-          .map((r) => Number(r.id_reponse))
-          .sort();
+      const correctes = await AnswerRepository.findByQuestionId(
+        q.id_question,
+      );
 
-        const brutes = Array.isArray(soumise.id_reponses)
-          ? soumise.id_reponses
-          : soumise.id_reponse !== undefined && soumise.id_reponse !== null
-            ? [soumise.id_reponse]
-            : [];
+      const idsCorrectes = correctes
+        .filter((r) => !!r.est_correcte)
+        .map((r) => Number(r.id_reponse))
+        .sort();
 
-        const idsChoisis = brutes.map(Number).sort();
+      const brutes = Array.isArray(soumise.id_reponses)
+        ? soumise.id_reponses
+        : soumise.id_reponse !== undefined && soumise.id_reponse !== null
+          ? [soumise.id_reponse]
+          : [];
 
-        const identiques =
-          idsCorrectes.length === idsChoisis.length &&
-          idsCorrectes.every((v, i) => v === idsChoisis[i]);
+      const idsChoisis = brutes.map(Number).sort();
 
-        if (identiques && idsCorrectes.length > 0) {
-          pointsObtenus += q.points;
-        }
+      const identiques =
+        idsCorrectes.length === idsChoisis.length &&
+        idsCorrectes.every((v, i) => v === idsChoisis[i]);
 
-        // Persistance des réponses choisies (une ligne par choix)
-        for (const idRep of idsChoisis) {
-          const existe = correctes.find(
-            (r) => Number(r.id_reponse) === Number(idRep),
+      if (identiques && idsCorrectes.length > 0) {
+        pointsObtenus += q.points;
+      }
+
+      // Persistance des réponses choisies (une ligne par choix)
+      for (const idRep of idsChoisis) {
+        const existe = correctes.find(
+          (r) => Number(r.id_reponse) === Number(idRep),
+        );
+        if (!existe) {
+          throw new ConflictError(
+            `La réponse ${idRep} n'appartient pas à la question ${q.id_question}.`,
           );
-          if (!existe) {
-            throw new ConflictError(
-              `La réponse ${idRep} n'appartient pas à la question ${q.id_question}.`,
-            );
-          }
-
-          await StudentAnswerRepository.create({
-            id_tentative: attempt.id_tentative,
-            id_question: q.id_question,
-            id_reponse: idRep,
-          });
         }
-      } else {
-        // Question LIBRE : enregistrement du texte, PAS de note inventée
-        contientLibre = true;
 
         await StudentAnswerRepository.create({
           id_tentative: attempt.id_tentative,
           id_question: q.id_question,
-          contenu:
-            typeof soumise.contenu === "string" ? soumise.contenu.trim() : "",
+          id_reponse: idRep,
         });
       }
     }
@@ -392,27 +379,14 @@ class AttemptService {
     const quiz = await QuizRepository.findById(attempt.id_quiz);
     const seuil = Number(quiz.score_reussite ?? 50);
 
-    let statutFinal;
-    let noteFinale;
-
-    if (contientLibre) {
-      // CORRECTION MANUELLE requise : aucune note automatique
-      statutFinal = "A_CORRIGER";
-      noteFinale = null;
-
-      await this._notifyFormateurACorriger(attempt, quiz);
-    } else {
-      // AUTO-CORRIGÉ
-      statutFinal = pourcentage >= seuil ? "REUSSIE" : "ECHOUEE";
-      noteFinale = pourcentage;
-
-      await this._notifyEtudiantResultat(user.id, quiz, statutFinal, pourcentage);
-    }
+    const statutFinal = pourcentage >= seuil ? "REUSSIE" : "ECHOUEE";
 
     await AttemptRepository.submit(attempt.id_tentative, {
-      note: noteFinale,
+      note: pourcentage,
       statut: statutFinal,
     });
+
+    await this._notifyEtudiantResultat(user.id, quiz, statutFinal, pourcentage);
 
     // La réussite/échec modifie l'état du parcours → recalcul progression
     await ProgressionService.recomputeForUserAndFormation(
@@ -423,167 +397,12 @@ class AttemptService {
     return {
       id_tentative: attempt.id_tentative,
       statut: statutFinal,
-      note: noteFinale === null ? null : Number(noteFinale),
-      score_reussite: seuil,
-      a_corriger: contientLibre,
-      message: contientLibre
-        ? "Tentative soumise. Vos réponses libres attendent la correction du formateur."
-        : statutFinal === "REUSSIE"
-          ? "Quiz réussi. Le chapitre suivant est débloqué."
-          : "Quiz échoué. Vous pouvez repasser le quiz.",
-    };
-  }
-
-  /* ---------------------------------------------------------------- */
-  /* 3) CORRECTION MANUELLE (formateur propriétaire / admin)           */
-  /* ---------------------------------------------------------------- */
-
-  /**
-   * PUT /attempts/:id/corriger
-   *
-   * Body :
-   * {
-   *   "notes": [ { "id_reponse_etudiant": 12, "note": 1 } ]  // note sur q.points
-   * }
-   *
-   * - réservé au formateur PROPRIÉTAIRE du quiz (ou admin) ;
-   * - la tentative doit être à l'état A_CORRIGER ;
-   * - note finale recalculée côté serveur ;
-   * - REUSSIE / ECHOUEE déterminé contre score_reussite du quiz.
-   */
-  async corrigerTentative(id_tentative, payload, user) {
-    const attempt = await AttemptRepository.findById(id_tentative);
-
-    if (!attempt) {
-      throw new NotFoundError("Tentative introuvable.");
-    }
-
-    if (attempt.statut !== "A_CORRIGER") {
-      throw new ConflictError(
-        "Cette tentative n'est pas en attente de correction.",
-      );
-    }
-
-    const formation = await resolveFormation("quiz", attempt.id_quiz);
-
-    if (!canGrade(user, formation)) {
-      throw new AccessDeniedError(
-        "Seul le formateur propriétaire de ce quiz peut corriger cette tentative.",
-      );
-    }
-
-    const corrections = Array.isArray(payload?.notes) ? payload.notes : [];
-
-    const reponses = await StudentAnswerRepository.findByAttemptId(
-      attempt.id_tentative,
-    );
-
-    const parId = new Map(
-      reponses.map((r) => [Number(r.id_reponse_etudiant), r]),
-    );
-
-    for (const c of corrections) {
-      const row = parId.get(Number(c.id_reponse_etudiant));
-
-      if (!row) {
-        throw new ConflictError(
-          `La réponse ${c.id_reponse_etudiant} n'appartient pas à cette tentative.`,
-        );
-      }
-
-      if (row.type_question !== "LIBRE") {
-        throw new ConflictError(
-          "Seules les questions libres peuvent être notées manuellement.",
-        );
-      }
-
-      const note = Number(c.note);
-      const max = Number(row.points_question);
-
-      if (!Number.isFinite(note) || note < 0 || note > max) {
-        throw new ConflictError(
-          `La note de la question ${row.id_question} doit être comprise entre 0 et ${max}.`,
-        );
-      }
-
-      await StudentAnswerRepository.grade(row.id_reponse_etudiant, note);
-    }
-
-    // Recalcul complet de la note finale côté serveur
-    const questions = await QuestionRepository.findByQuizId(attempt.id_quiz);
-    const apresCorrection = await StudentAnswerRepository.findByAttemptId(
-      attempt.id_tentative,
-    );
-
-    const totalPoints = questions.reduce((s, q) => s + q.points, 0);
-    let pointsObtenus = 0;
-
-    for (const q of questions) {
-      const lignes = apresCorrection.filter(
-        (r) => Number(r.id_question) === q.id_question,
-      );
-
-      if (q.type === "QCM") {
-        const idsCorrectes = lignes
-          .filter((l) => !!l.est_correcte)
-          .map((l) => Number(l.id_reponse));
-        const idsChoisis = lignes.map((l) => Number(l.id_reponse));
-
-        if (
-          idsCorrectes.length > 0 &&
-          idsCorrectes.length === idsChoisis.length &&
-          idsCorrectes.every((id) => idsChoisis.includes(id))
-        ) {
-          pointsObtenus += q.points;
-        }
-      } else {
-        // note attribuée par le formateur (une seule ligne par question libre)
-        const noteLigne = lignes.reduce(
-          (acc, l) => acc + (l.note === null ? 0 : Number(l.note)),
-          0,
-        );
-        pointsObtenus += Math.min(noteLigne, q.points);
-      }
-    }
-
-    const pourcentage =
-      totalPoints > 0
-        ? Math.round((pointsObtenus / totalPoints) * 10000) / 100
-        : 0;
-
-    const quiz = await QuizRepository.findById(attempt.id_quiz);
-    const seuil = Number(quiz.score_reussite ?? 50);
-    const statutFinal = pourcentage >= seuil ? "REUSSIE" : "ECHOUEE";
-
-    await AttemptRepository.correct(attempt.id_tentative, {
-      note: pourcentage,
-      statut: statutFinal,
-    });
-
-    // Notification à l'étudiant : son quiz a été corrigé
-    await NotificationService.createNotification({
-      id_utilisateur: attempt.id_utilisateur,
-      titre:
-        statutFinal === "REUSSIE"
-          ? "Quiz validé"
-          : "Quiz corrigé",
-      contenu:
-        `Votre quiz « ${attempt.quiz} » a été corrigé. Note : ${pourcentage}/100.` +
-        (statutFinal === "REUSSIE"
-          ? " Chapitre suivant débloqué."
-          : " Vous pouvez repasser le quiz."),
-    });
-
-    await ProgressionService.recomputeForUserAndFormation(
-      attempt.id_utilisateur,
-      quiz.id_formation,
-    );
-
-    return {
-      id_tentative: attempt.id_tentative,
-      statut: statutFinal,
       note: Number(pourcentage),
       score_reussite: seuil,
+      message:
+        statutFinal === "REUSSIE"
+          ? "Quiz réussi. Le chapitre suivant est débloqué."
+          : "Quiz échoué. Vous pouvez repasser le quiz.",
     };
   }
 
@@ -591,23 +410,11 @@ class AttemptService {
   /* Notifications internes                                            */
   /* ---------------------------------------------------------------- */
 
-  async _notifyFormateurACorriger(attempt, quiz) {
-    try {
-      const formation = await resolveFormation("quiz", attempt.id_quiz);
-      if (!formation) return;
-
-      await NotificationService.createNotification({
-        id_utilisateur: formation.id_formateur,
-        titre: "Tentative à corriger",
-        contenu: `${attempt.prenom ?? ""} ${attempt.nom ?? ""} a soumis le quiz « ${quiz.titre} ». Des réponses libres attendent votre correction.`,
-      });
-    } catch (e) {
-      // jamais bloquant pour l'étudiant
-      console.warn("notification formateur échouée:", e.message);
-    }
-  }
-
   async _notifyEtudiantResultat(id_utilisateur, quiz, statut, note) {
+
+  /* ---------------------------------------------------------------- */
+  /* Notifications internes                                            */
+  /* ---------------------------------------------------------------- */
     try {
       await NotificationService.createNotification({
         id_utilisateur,

@@ -46,11 +46,11 @@ class QuestionService {
   }
 
   /**
-   * Créer une question (QCM ou LIBRE)
+   * Créer une question (QCM uniquement)
    *
    * Règles :
    * - QCM : le formateur ajoute ensuite ses choix via /answers ;
-   * - LIBRE : pas de choix prédéfinis, correction manuelle.
+   * - le type LIBRE n'est plus pris en charge par le produit.
    */
   async createQuestion(data, user) {
     const quiz = await QuizRepository.findById(data.id_quiz);
@@ -60,6 +60,12 @@ class QuestionService {
     }
 
     await assertCanManage("quiz", data.id_quiz, user);
+
+    if (data.type !== undefined && data.type !== "QCM") {
+      throw new ConflictError(
+        "Seules les questions à choix multiple (QCM) sont prises en charge.",
+      );
+    }
 
     if (
       data.points !== undefined &&

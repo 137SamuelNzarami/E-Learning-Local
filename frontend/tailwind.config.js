@@ -12,6 +12,7 @@ export default {
           "sans-serif",
         ],
         serif: ["Newsreader", "Georgia", "serif"],
+        mono: ["JetBrains Mono", "Fira Code", "monospace"],
       },
       colors: {
         brand: {
@@ -42,10 +43,12 @@ export default {
         canvas: {
           DEFAULT: "#f6f4ef",
           deep: "#f0ede5",
+          warm: "#faf8f3",
         },
         ink: {
           DEFAULT: "#1f2e28",
           soft: "#44574e",
+          faint: "#6b7f74",
         },
         slate: {
           50: "#f7f7f3",
@@ -60,11 +63,69 @@ export default {
           900: "#2b2b28",
           950: "#1a1a17",
         },
+        admin: {
+          DEFAULT: "#1e293b",
+          light: "#334155",
+          accent: "#ef4444",
+          surface: "#f8fafc",
+        },
+        success: {
+          50: "#f0fdf4",
+          100: "#dcfce7",
+          500: "#22c55e",
+          600: "#16a34a",
+          700: "#15803d",
+        },
+        danger: {
+          50: "#fef2f2",
+          100: "#fee2e2",
+          500: "#ef4444",
+          600: "#dc2626",
+          700: "#b91c1c",
+        },
+        warning: {
+          50: "#fffbeb",
+          100: "#fef3c7",
+          500: "#f59e0b",
+          600: "#d97706",
+        },
       },
       boxShadow: {
         card: "0 1px 2px 0 rgb(31 46 40 / 0.03), 0 2px 8px -2px rgb(31 46 40 / 0.05)",
         lift: "0 16px 40px -16px rgb(31 46 40 / 0.24), 0 6px 16px -8px rgb(31 46 40 / 0.12)",
         soft: "0 2px 4px -1px rgb(31 46 40 / 0.04)",
+        glow: "0 0 20px -4px rgb(53 106 81 / 0.15)",
+        sidebar: "2px 0 12px -2px rgb(0 0 0 / 0.08)",
+        header: "0 1px 3px 0 rgb(0 0 0 / 0.04), 0 1px 2px -1px rgb(0 0 0 / 0.04)",
+      },
+      borderRadius: {
+        "2xl": "1rem",
+        "3xl": "1.5rem",
+      },
+      animation: {
+        "fade-in": "fadeIn 0.3s ease-out",
+        "slide-up": "slideUp 0.3s ease-out",
+        "slide-in": "slideIn 0.25s ease-out",
+        "scale-in": "scaleIn 0.2s ease-out",
+        pulse: "pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+      },
+      keyframes: {
+        fadeIn: {
+          "0%": { opacity: "0" },
+          "100%": { opacity: "1" },
+        },
+        slideUp: {
+          "0%": { opacity: "0", transform: "translateY(8px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
+        slideIn: {
+          "0%": { opacity: "0", transform: "translateX(-8px)" },
+          "100%": { opacity: "1", transform: "translateX(0)" },
+        },
+        scaleIn: {
+          "0%": { opacity: "0", transform: "scale(0.95)" },
+          "100%": { opacity: "1", transform: "scale(1)" },
+        },
       },
     },
   },

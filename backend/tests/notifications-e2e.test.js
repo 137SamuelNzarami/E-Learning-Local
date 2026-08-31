@@ -8,9 +8,8 @@
  *
  *  1. Inscription étudiant        -> « Nouvel étudiant inscrit » (formateur)
  *  2. Message en conversation     -> « Nouveau message » (participants)
- *  3. Tentative soumise (LIBRE)   -> « Tentative à corriger » (formateur)
- *  4. Correction du formateur     -> « Quiz validé/corrigé » (étudiant)
- *  5. Avis sur une formation      -> « Nouvel avis » (formateur)
+ *  3. Quiz soumis (QCM)           -> « Quiz réussi / échoué » (étudiant)
+ *  4. Avis sur une formation      -> « Nouvel avis » (formateur)
  *
  * Nécessite la base MySQL configurée (.env) avec au moins un formateur
  * et un étudiant réels distincts.
@@ -213,10 +212,10 @@ async function main() {
   }
 
   /* ------------------------------------------------------------------ */
-  /* TRIGGER 3 — Tentative soumise (LIBRE) -> « Tentative à corriger »   */
+  /* TRIGGER 3 — Quiz soumis (QCM) -> « Quiz réussi/échoué » étudiant    */
   /* ------------------------------------------------------------------ */
 
-  console.log("\n--- TRIGGER 3 : tentative soumise -> notif formateur ---");
+  console.log("\n--- TRIGGER 3 : quiz soumis -> notif étudiant ---");
 
   const ch = await call("POST", "/api/chapters", {
     token: F,
@@ -247,13 +246,6 @@ async function main() {
   check(qcm.status === 200, "POST /questions (QCM) -> 200");
   const idQcm = qcm.body?.data?.id;
 
-  const libre = await call("POST", "/api/questions", {
-    token: F,
-    body: { id_quiz: idQuiz, enonce: "Expliquez.", type: "LIBRE", points: 1 },
-  });
-  check(libre.status === 200, "POST /questions (LIBRE) -> 200");
-  const idLibre = libre.body?.data?.id;
-
   const rOk = await call("POST", "/api/answers", {
     token: F,
     body: { id_question: idQcm, texte: "4", est_correcte: true },
@@ -268,96 +260,49 @@ async function main() {
   const idTentative = start.body?.data?.tentative?.id_tentative;
   check(!!idTentative, "tentative EN_COURS créée pour l'étudiant");
 
+  const unreadEAvant3 = await getUnreadCount(etudiant.id);
+  const unreadFAvant3 = await getUnreadCount(formateur.id);
+
   const submit = await call("POST", `/api/attempts/${idTentative}/submit`, {
     token: S,
     body: {
-      reponses: [
-        { id_question: idQcm, id_reponses: [idRepOk] },
-        { id_question: idLibre, contenu: "Ma réponse libre." },
-      ],
+      reponses: [{ id_question: idQcm, id_reponses: [idRepOk] }],
     },
   });
   check(submit.status === 200, "POST /attempts/:id/submit -> 200");
   check(
-    submit.body?.data?.statut === "A_CORRIGER",
-    "soumission avec réponse libre -> A_CORRIGER",
+    submit.body?.data?.statut === "REUSSIE" && Number(submit.body?.data?.note) === 100,
+    "correction automatique QCM -> REUSSIE (100)",
   );
 
-  const notifsApres3 = await getNotifications(formateur.id);
+  const notifsApres3 = await getNotifications(etudiant.id);
   const notif3 = notifsApres3.find((n) =>
-    String(n.titre).includes("Tentative à corriger"),
+    String(n.titre).includes("Quiz réussi"),
   );
-  check(notif3 != null, `formateur reçoit « Tentative à corriger »`);
+  check(notif3 != null, `étudiant reçoit « Quiz réussi » (correction auto)`);
   if (notif3) {
     check(
-      String(notif3.contenu).includes(etudiant.prenom) &&
+      String(notif3.contenu).includes("100") &&
         String(notif3.contenu).includes(`Quiz Notif ${marqueur}`),
-      "la notification contient le prénom étudiant et le titre du quiz",
+      "la notification contient la note et le titre du quiz",
     );
   }
 
-  /* ------------------------------------------------------------------ */
-  /* TRIGGER 4 — Correction -> « Quiz validé/corrigé »                   */
-  /* ------------------------------------------------------------------ */
-
-  console.log("\n--- TRIGGER 4 : correction -> notif étudiant ---");
-
-  const reponsesE = await call(
-    "GET",
-    `/api/student-answers/attempt/${idTentative}`,
-    { token: F },
+  const unreadEApres3 = await getUnreadCount(etudiant.id);
+  check(unreadEApres3 > unreadEAvant3, "compteur non-lus de l'étudiant augmenté");
+  const unreadFApres3 = await getUnreadCount(formateur.id);
+  check(
+    unreadFApres3 === unreadFAvant3,
+    "aucune notification de correction pour le formateur (100 % auto)",
   );
-  check(reponsesE.status === 200, "GET /student-answers/attempt/:id formateur -> 200");
-  const ligneLibre = (reponsesE.body?.data ?? []).find(
-    (r) => Number(r.id_question) === Number(idLibre),
-  );
-  check(ligneLibre != null, "réponse libre identifiable côté formateur");
-
-  if (ligneLibre) {
-    const unreadSAvant4 = await getUnreadCount(etudiant.id);
-
-    const corriger = await call(
-      "PATCH",
-      `/api/attempts/${idTentative}/corriger`,
-      {
-        token: F,
-        body: {
-          notes: [{ id_reponse_etudiant: ligneLibre.id_reponse_etudiant, note: 1 }],
-        },
-      },
-    );
-    check(corriger.status === 200, "PATCH /attempts/:id/corriger -> 200");
-    check(
-      corriger.body?.data?.statut === "REUSSIE" &&
-        Number(corriger.body?.data?.note) === 100,
-      "correction complète -> REUSSIE (100 recalculé serveur)",
-    );
-
-    const notifsApres4 = await getNotifications(etudiant.id);
-    const notif4 = notifsApres4.find(
-      (n) =>
-        String(n.titre).includes("Quiz validé") ||
-        String(n.titre).includes("Quiz corrigé"),
-    );
-    check(notif4 != null, `étudiant reçoit « Quiz validé/corrigé »`);
-    if (notif4) {
-      check(
-        String(notif4.contenu).includes("100"),
-        "la notification contient la note finale",
-      );
-    }
-
-    const unreadSApres4 = await getUnreadCount(etudiant.id);
-    check(unreadSApres4 > unreadSAvant4, "compteur non-lus de l'étudiant augmenté");
-  }
 
   /* ------------------------------------------------------------------ */
-  /* TRIGGER 5 — Avis -> « Nouvel avis »                                 */
+  /* TRIGGER 4 — Avis -> « Nouvel avis »                                 */
   /* ------------------------------------------------------------------ */
 
-  console.log("\n--- TRIGGER 5 : avis -> notif formateur ---");
+  console.log("\n--- TRIGGER 4 : avis -> notif formateur ---");
 
-  const unreadFAvant5 = await getUnreadCount(formateur.id);
+  const unreadFAvant4 = await getUnreadCount(formateur.id);
 
   const avis = await call("POST", "/api/reviews", {
     token: S,
@@ -370,21 +315,21 @@ async function main() {
   });
   check(avis.status === 200, "POST /reviews étudiant inscrit -> 200");
 
-  const notifsApres5 = await getNotifications(formateur.id);
-  const notif5 = notifsApres5.find((n) =>
+  const notifsApres4 = await getNotifications(formateur.id);
+  const notif4 = notifsApres4.find((n) =>
     String(n.titre).includes("Nouvel avis"),
   );
-  check(notif5 != null, `formateur reçoit « Nouvel avis »`);
-  if (notif5) {
+  check(notif4 != null, `formateur reçoit « Nouvel avis »`);
+  if (notif4) {
     check(
-      String(notif5.contenu).includes(etudiant.prenom) &&
-        String(notif5.contenu).includes(`Formation Notif ${marqueur}`),
+      String(notif4.contenu).includes(etudiant.prenom) &&
+        String(notif4.contenu).includes(`Formation Notif ${marqueur}`),
       "la notification contient le prénom étudiant et le titre formation",
     );
   }
 
-  const unreadFApres5 = await getUnreadCount(formateur.id);
-  check(unreadFApres5 > unreadFAvant5, "compteur non-lus du formateur augmenté");
+  const unreadFApres4 = await getUnreadCount(formateur.id);
+  check(unreadFApres4 > unreadFAvant4, "compteur non-lus du formateur augmenté");
 
   /* ------------------------------------------------------------------ */
   /* CONTRE-TEST — Marquer comme lu                                      */
@@ -401,7 +346,7 @@ async function main() {
     );
     check(luRes.status === 200, "PATCH /notifications/:id/lu -> 200");
     check(
-      (await getUnreadCount(formateur.id)) < unreadFApres5,
+      (await getUnreadCount(formateur.id)) < unreadFApres4,
       "compteur non-lus diminué après marquage",
     );
   } else {

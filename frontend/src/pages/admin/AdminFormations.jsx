@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import PageHeader from "../../components/ui/PageHeader";
 import Card from "../../components/ui/Card";
 import Spinner from "../../components/ui/Spinner";
 import Modal from "../../components/ui/Modal";
@@ -8,12 +7,14 @@ import ConfirmDialog from "../../components/ui/ConfirmDialog";
 import EmptyState from "../../components/ui/EmptyState";
 import Alert from "../../components/ui/Alert";
 import Pagination from "../../components/ui/Pagination";
+import Badge from "../../components/ui/Badge";
 import FieldError, { FormAlert } from "../../components/ui/FieldError";
 import { formationService } from "../../services/formationService";
 import { categoryService } from "../../services/categoryService";
 import { userService } from "../../services/userService";
 import { usePagination } from "../../hooks/useApi";
 import { Icons } from "../../components/Icons";
+import { formatDate } from "../../utils/format";
 
 export default function AdminFormations() {
   const [formations, setFormations] = useState([]);
@@ -48,9 +49,7 @@ export default function AdminFormations() {
     }
   };
 
-  useEffect(() => {
-    loadAll();
-  }, []);
+  useEffect(() => { loadAll(); }, []);
 
   const openCreate = () => {
     setEditing(null);
@@ -120,53 +119,85 @@ export default function AdminFormations() {
     pagination.page * pagination.limit
   );
 
+  const publiees = formations.filter((f) => f.statut === "PUBLIEE").length;
+
   return (
-    <div>
-      <PageHeader
-        title="Formations"
-        subtitle="Toutes les formations de la plateforme"
-        actions={<button type="button" className="btn-primary" onClick={openCreate}><Icons.plus className="h-4 w-4" /> Nouvelle formation</button>}
-      />
+    <div className="space-y-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="page-title">Formations</h1>
+          <p className="page-subtitle">Toutes les formations de la plateforme</p>
+        </div>
+        <button type="button" className="btn-primary" onClick={openCreate}>
+          <Icons.plus className="h-4 w-4" /> Nouvelle formation
+        </button>
+      </div>
 
-      {notice && <Alert type="success" className="mb-4" title={notice} />}
-      {error && <Alert type="error" className="mb-4" title={error.message} />}
+      {notice && (
+        <div className="animate-slide-up rounded-xl border border-success-200 bg-success-50 p-3 text-sm font-medium text-success-700">
+          {notice}
+        </div>
+      )}
+      {error && <Alert type="error" title={error.message} />}
 
-      <Card>
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-3">
+        <div className="stat-card">
+          <p className="stat-label">Total</p>
+          <p className="stat-value text-lg">{formations.length}</p>
+        </div>
+        <div className="stat-card">
+          <p className="stat-label">Publiées</p>
+          <p className="stat-value text-lg text-success-600">{publiees}</p>
+        </div>
+        <div className="stat-card">
+          <p className="stat-label">Brouillons</p>
+          <p className="stat-value text-lg text-warning-600">{formations.length - publiees}</p>
+        </div>
+      </div>
+
+      <Card className="p-0 overflow-hidden">
         {loading ? (
-          <Spinner />
+          <div className="p-8"><Spinner /></div>
         ) : formations.length === 0 ? (
-          <EmptyState title="Aucune formation" />
+          <div className="p-8"><EmptyState title="Aucune formation" /></div>
         ) : (
           <>
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="border-b border-slate-200 bg-slate-50">
+                <thead className="border-b border-slate-200 bg-slate-50/80">
                   <tr>
                     <th className="th">#</th>
                     <th className="th">Titre</th>
                     <th className="th">Catégorie</th>
                     <th className="th">Formateur</th>
+                    <th className="th">Statut</th>
                     <th className="th text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {pageItems.map((f) => (
-                    <tr key={f.id_formation} className="hover:bg-slate-50">
-                      <td className="td text-slate-400">#{f.id_formation}</td>
+                    <tr key={f.id_formation} className="transition-base hover:bg-slate-50/50">
+                      <td className="td text-slate-400 tabular-nums">#{f.id_formation}</td>
                       <td className="td">
-                        <Link to={`/admin/formations/${f.id_formation}`} className="font-medium text-brand-600 hover:underline">
-                          {f.titre}
-                        </Link>
+                        <span className="font-semibold text-slate-800">{f.titre}</span>
                       </td>
-                      <td className="td">{f.nom_categorie}</td>
+                      <td className="td">{f.nom_categorie || "—"}</td>
                       <td className="td">{f.prenom} {f.nom}</td>
+                      <td className="td">
+                        <Badge color={f.statut === "PUBLIEE" ? "green" : "amber"}>
+                          {f.statut === "PUBLIEE" ? "Publiée" : "Brouillon"}
+                        </Badge>
+                      </td>
                       <td className="td text-right">
-                        <button type="button" className="btn-secondary !px-3 !py-1.5 !text-xs mr-2" onClick={() => openEdit(f)}>
-                          Modifier
-                        </button>
-                        <button type="button" className="btn-ghost !px-3 !py-1.5 !text-xs text-red-600 hover:bg-red-50" onClick={() => setDeleting(f)}>
-                          Supprimer
-                        </button>
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button type="button" className="btn-secondary btn-sm" onClick={() => openEdit(f)}>
+                            <Icons.edit className="h-3 w-3" /> Modifier
+                          </button>
+                          <button type="button" className="btn-ghost btn-sm !text-danger-500 hover:!bg-danger-50" onClick={() => setDeleting(f)}>
+                            <Icons.trash className="h-3 w-3" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -212,7 +243,7 @@ export default function AdminFormations() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="label">Catégorie</label>
-              <select className="input" value={form.id_categorie} onChange={update("id_categorie")}>
+              <select className="select" value={form.id_categorie} onChange={update("id_categorie")}>
                 <option value="">Choisir...</option>
                 {categories.map((c) => (
                   <option key={c.id_categorie} value={c.id_categorie}>{c.nom_categorie}</option>
@@ -222,7 +253,7 @@ export default function AdminFormations() {
             </div>
             <div>
               <label className="label">Formateur</label>
-              <select className="input" value={form.id_formateur} onChange={update("id_formateur")}>
+              <select className="select" value={form.id_formateur} onChange={update("id_formateur")}>
                 <option value="">Choisir...</option>
                 {formateurs.map((u) => (
                   <option key={u.id_utilisateur} value={u.id_utilisateur}>{u.prenom} {u.nom}</option>

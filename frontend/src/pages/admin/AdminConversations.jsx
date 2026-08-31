@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import PageHeader from "../../components/ui/PageHeader";
 import Card from "../../components/ui/Card";
 import Spinner from "../../components/ui/Spinner";
 import Modal from "../../components/ui/Modal";
@@ -119,45 +118,61 @@ export default function AdminConversations() {
   );
 
   return (
-    <div>
-      <PageHeader
-        title="Conversations"
-        subtitle="Messagerie privée de la plateforme"
-        actions={<button type="button" className="btn-primary" onClick={() => setCreateOpen(true)}><Icons.plus className="h-4 w-4" /> Nouvelle conversation</button>}
-      />
+    <div className="space-y-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="page-title">Conversations</h1>
+          <p className="page-subtitle">Messagerie privée de la plateforme</p>
+        </div>
+        <button type="button" className="btn-primary" onClick={() => setCreateOpen(true)}>
+          <Icons.plus className="h-4 w-4" /> Nouvelle conversation
+        </button>
+      </div>
 
-      {notice && <Alert type="success" className="mb-4" title={notice} />}
-      {error && <Alert type="error" className="mb-4" title={error.message} />}
+      {notice && (
+        <div className="animate-slide-up rounded-xl border border-success-200 bg-success-50 p-3 text-sm font-medium text-success-700">
+          {notice}
+        </div>
+      )}
+      {error && <Alert type="error" title={error.message} />}
 
-      <Card>
+      <Card className="p-0 overflow-hidden">
         {loading ? (
-          <Spinner />
+          <div className="p-8"><Spinner /></div>
         ) : conversations.length === 0 ? (
-          <EmptyState title="Aucune conversation" />
+          <div className="p-8">
+            <EmptyState
+              title="Aucune conversation"
+              message="Créez une conversation pour démarrer un échange."
+              action={<button type="button" className="btn-primary" onClick={() => setCreateOpen(true)}>Nouvelle conversation</button>}
+            />
+          </div>
         ) : (
           <>
             <ul className="divide-y divide-slate-100">
               {pageItems.map((c) => {
                 const parts = convParticipants(c.id_conversation);
                 return (
-                  <li key={c.id_conversation} className="flex items-center gap-4 py-4">
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-600">
-                      <Icons.messages />
-                    </span>
+                  <li key={c.id_conversation} className="flex items-center gap-4 px-5 py-4 transition-base hover:bg-slate-50/50">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600">
+                      <Icons.messages className="h-5 w-5" />
+                    </div>
                     <div className="min-w-0 flex-1">
-                      <Link to={`/messagerie/conversation/${c.id_conversation}`} className="font-medium text-slate-900 hover:text-brand-600">
+                      <p className="truncate text-sm font-semibold text-slate-800">
                         {c.sujet || `Conversation #${c.id_conversation}`}
-                      </Link>
-                      <p className="text-xs text-slate-400">
+                      </p>
+                      <p className="text-[11px] text-slate-400">
                         {parts.length} participant{parts.length > 1 ? "s" : ""}
                       </p>
                     </div>
-                    <button type="button" className="btn-secondary !px-3 !py-1.5 !text-xs mr-2" onClick={() => setManageFor(c)}>
-                      Participants
-                    </button>
-                    <button type="button" className="btn-ghost !px-3 !py-1.5 !text-xs text-red-600 hover:bg-red-50" onClick={() => setDeleting(c)}>
-                      Supprimer
-                    </button>
+                    <div className="flex items-center gap-1.5">
+                      <button type="button" className="btn-secondary btn-sm" onClick={() => setManageFor(c)}>
+                        <Icons.users className="h-3 w-3" /> Participants
+                      </button>
+                      <button type="button" className="btn-ghost btn-sm !text-danger-500 hover:!bg-danger-50" onClick={() => setDeleting(c)}>
+                        <Icons.trash className="h-3 w-3" />
+                      </button>
+                    </div>
                   </li>
                 );
               })}
@@ -207,7 +222,7 @@ export default function AdminConversations() {
         {manageFor && (
           <div className="space-y-4">
             <form onSubmit={addParticipant} className="flex gap-2">
-              <select className="input flex-1" value={newParticipant} onChange={(e) => setNewParticipant(e.target.value)}>
+              <select className="select flex-1" value={newParticipant} onChange={(e) => setNewParticipant(e.target.value)}>
                 <option value="">Ajouter un utilisateur...</option>
                 {users
                   .filter((u) => !convParticipants(manageFor.id_conversation).some((p) => p.id_utilisateur === u.id_utilisateur))
@@ -223,12 +238,12 @@ export default function AdminConversations() {
             </form>
             <ul className="divide-y divide-slate-100">
               {convParticipants(manageFor.id_conversation).length === 0 ? (
-                <li className="py-2 text-sm text-slate-400">Aucun participant.</li>
+                <li className="py-3 text-center text-sm text-slate-400">Aucun participant</li>
               ) : (
                 convParticipants(manageFor.id_conversation).map((p) => (
-                  <li key={p.id_participant} className="flex items-center justify-between py-2">
-                    <span className="text-sm text-slate-700">{p.prenom} {p.nom}</span>
-                    <button type="button" className="btn-ghost !px-2 !py-1 !text-xs text-red-600 hover:bg-red-50" onClick={() => removeParticipant(p)}>
+                  <li key={p.id_participant} className="flex items-center justify-between py-2.5">
+                    <span className="text-sm font-medium text-slate-700">{p.prenom} {p.nom}</span>
+                    <button type="button" className="btn-ghost btn-sm !text-danger-500 hover:!bg-danger-50" onClick={() => removeParticipant(p)}>
                       Retirer
                     </button>
                   </li>

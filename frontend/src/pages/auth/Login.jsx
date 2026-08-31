@@ -23,7 +23,7 @@ export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const from = location.state?.from?.pathname || "/dashboard";
+  const from = location.state?.from?.pathname;
 
   const [form, setForm] = useState({ email: "", mot_de_passe: "" });
   const [error, setError] = useState(null);
@@ -34,8 +34,10 @@ export default function Login() {
     setError(null);
     setBusy(true);
     try {
-      await login(form);
-      navigate(from, { replace: true });
+      const res = await login(form);
+      const role = res.data?.utilisateur?.role;
+      const target = from || (role === "Administrateur" ? "/admin/dashboard" : "/dashboard");
+      navigate(target, { replace: true });
     } catch (err) {
       setError(err);
     } finally {

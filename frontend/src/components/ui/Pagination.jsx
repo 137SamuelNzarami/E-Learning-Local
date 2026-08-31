@@ -17,7 +17,7 @@ export default function Pagination({ page, totalPages, total, limit, onPageChang
       <div className="flex items-center gap-2 text-sm text-slate-500">
         <span>{total} résultat{total > 1 ? "s" : ""}</span>
         <select
-          className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs shadow-soft"
+          className="select !w-auto !py-1 !text-xs"
           value={limit}
           onChange={(e) => onLimitChange(Number(e.target.value))}
         >
@@ -30,7 +30,7 @@ export default function Pagination({ page, totalPages, total, limit, onPageChang
       <nav className="flex items-center gap-1">
         <button
           type="button"
-          className="btn-secondary !px-3 !py-1.5 !text-xs"
+          className="btn-secondary btn-sm"
           disabled={page <= 1}
           onClick={() => onPageChange(page - 1)}
         >
@@ -45,7 +45,7 @@ export default function Pagination({ page, totalPages, total, limit, onPageChang
               key={p}
               type="button"
               onClick={() => onPageChange(p)}
-              className={`inline-flex h-8 w-8 items-center justify-center rounded-lg text-sm font-semibold transition ${
+              className={`inline-flex h-8 w-8 items-center justify-center rounded-lg text-sm font-semibold transition-base ${
                 p === page
                   ? "bg-brand-700 text-white shadow-soft"
                   : "text-slate-600 hover:bg-slate-100"
@@ -57,7 +57,7 @@ export default function Pagination({ page, totalPages, total, limit, onPageChang
         )}
         <button
           type="button"
-          className="btn-secondary !px-3 !py-1.5 !text-xs"
+          className="btn-secondary btn-sm"
           disabled={page >= totalPages}
           onClick={() => onPageChange(page + 1)}
         >

@@ -635,7 +635,9 @@ Un quiz. **Auth** : requise. **Erreurs** : 404.
 
 ## Questions `/api/questions`
 
-Table `questions` : `id_question, id_quiz, enonce, type ENUM('QCM','LIBRE') DEFAULT 'QCM', points INT DEFAULT 1`.
+Table `questions` : `id_question, id_quiz, enonce, type ENUM('QCM') DEFAULT 'QCM', points INT DEFAULT 1`.
+Seul le type `QCM` est accepté : `type` ne peut prendre que la valeur `QCM`, et le
+type ne peut jamais être modifié après création (voir `PUT /api/questions/:id`).
 
 ### GET /api/questions/quiz/:id_quiz
 
@@ -660,7 +662,7 @@ Une question. Étudiant : quiz accessible requis. **Auth** : requise.
 |-------|------|--------|
 | id_quiz | int | requis, ≥ 1 |
 | enonce | string | requis, min. 3 caractères |
-| type | string | optionnel : `QCM` ou `LIBRE` (défaut `QCM`) |
+| type | string | optionnel : `QCM` uniquement (défaut `QCM`) — tout autre valeur est refusée (422/409) |
 | points | int | optionnel, ≥ 1 (défaut 1) |
 
 **Réponse 200** : `"data": { "id": <nouvel id> }`. **Erreurs** : 404 · 403 · 422.
@@ -736,15 +738,21 @@ Une réponse. Étudiant : quiz accessible requis. **Auth** : requise.
 
 ## Tentatives `/api/attempts`
 
+Toutes les questions sont **QCM** et la correction est **100 % automatique** côté
+serveur au moment de la soumission. Il n'existe aucun workflow de correction
+manuelle (pas de `corriger`, pas de `A_CORRIGER`, pas de `date_correction`).
+
 Cycle de vie : `EN_COURS` → (`SOUMISE`→)`REUSSIE`/`ECHOUEE` (QCM seuls,
-auto-corrigés) ou → `A_CORRIGER` → correction formateur → `REUSSIE`/`ECHOUEE`.
+auto-corrigés). La valeur `SOUMISE` existe dans l'enum mais le produit ne
+transitionne jamais vers elle : la soumission passe directement de `EN_COURS`
+à `REUSSIE` ou `ECHOUEE`.
 Note TOUJOURS recalculée serveur : points obtenus / points totaux × 100.
 
 ### GET /api/attempts
 
 Toutes les tentatives. **Rôles** : ADM.
 
-**Réponse 200** : lignes `{ id_tentative, id_utilisateur, nom, prenom, email, id_quiz, quiz, score_reussite, note, statut, date_soumission, date_correction, created_at }`.
+**Réponse 200** : lignes `{ id_tentative, id_utilisateur, nom, prenom, email, id_quiz, quiz, score_reussite, note, statut, date_soumission, created_at }`.
 
 ### GET /api/attempts/user/:id_utilisateur
 
@@ -773,8 +781,7 @@ Idempotent : renvoie la tentative EN_COURS existante.
     "score_reussite": 50,
     "questions": [
       { "id_question": 13, "enonce": "HTML signifie ?", "type": "QCM", "points": 1,
-        "reponses": [ { "id_reponse": 27, "contenu": "HyperText Markup Language" }, { "id_reponse": 28, "contenu": "Hyper Text Machine Language" } ] },
-      { "id_question": 14, "enonce": "Citez un point clé du cours.", "type": "LIBRE", "points": 1 }
+        "reponses": [ { "id_reponse": 27, "contenu": "HyperText Markup Language" }, { "id_reponse": 28, "contenu": "Hyper Text Machine Language" } ] }
     ]
   }
 }
@@ -787,7 +794,7 @@ Idempotent : renvoie la tentative EN_COURS existante.
 
 ### POST /api/attempts/:id/submit
 
-Soumettre une tentative EN_COURS.
+Soumettre une tentative EN_COURS. **Correction automatique** (QCM uniquement).
 
 **Rôles** : ETD (propriétaire de la tentative uniquement).
 
@@ -797,26 +804,27 @@ Soumettre une tentative EN_COURS.
 |-------|------|--------|
 | reponses | array | requis — un élément PAR question du quiz |
 | reponses[].id_question | int | requis, ≥ 1 |
-| reponses[].id_reponses | array[int] | pour QCM : ids des choix cochés |
-| reponses[].contenu | string | pour LIBRE : texte libre |
+| reponses[].id_reponses | array[int] | requis — ids des choix cochés pour cette question QCM |
 
 **Exemple requête**
 
 ```json
 {
   "reponses": [
-    { "id_question": 13, "id_reponses": [27] },
-    { "id_question": 14, "contenu": "Les boucles permettent de répéter des instructions." }
+    { "id_question": 13, "id_reponses": [27] }
   ]
 }
 ```
 
 **Comportement** :
-- chaque question doit être répondue (sinon **409** « La question N n'a pas été répondue. ») ;
+- chaque question du quiz doit être présente dans `reponses[]` (sinon **409** « La question N n'a pas été répondue. ») ;
 - toute question étrangère au quiz → 409 ;
+- tout id de réponse n'appartenant pas à sa question → 409 ;
+- toute question dont le type n'est pas `QCM` → 409 ;
 - QCM : auto-corrigé (égalité exacte des ensembles d'ids choisis/corrects) ;
-- LIBRE présent : statut final `A_CORRIGER`, `note = null`, notification formateur ;
-- sinon : `REUSSIE`/`ECHOUEE` vs `score_reussite`, notification étudiant ;
+- note = points_obtenus / totalPoints × 100 (arrondi à 2 décimales) ;
+- statut = `REUSSIE` si note ≥ `score_reussite`, sinon `ECHOUEE` ;
+- notification étudiant immédiate (« Quiz réussi » / « Quiz échoué ») ;
 - progression recalculée automatiquement.
 
 **Réponse 200**
@@ -827,17 +835,17 @@ Soumettre une tentative EN_COURS.
   "message": "Tentative soumise avec succès.",
   "data": {
     "id_tentative": 34,
-    "statut": "A_CORRIGER",
-    "note": null,
+    "statut": "REUSSIE",
+    "note": 100,
     "score_reussite": 50,
-    "a_corriger": true,
-    "message": "Tentative soumise. Vos réponses libres attendent la correction du formateur."
+    "message": "Quiz réussi. Le chapitre suivant est débloqué."
   }
 }
 ```
 
 **Erreurs** : 403 tentative d'autrui · 404 · **409** soumission incomplète /
-déjà soumise (« Cette tentative a déjà été soumise… ») / choix inexistant.
+déjà soumise (« Cette tentative a déjà été soumise… ») / question étrangère au
+quiz / réponse n'appartenant pas à la question / question non QCM.
 
 ### GET /api/attempts/quiz/:id_quiz/mine
 
@@ -858,8 +866,8 @@ Historique de l'étudiant courant sur un quiz (quiz accessible requis).
     "tentative_en_cours": null,
     "peut_passer": false,
     "tentatives": [
-      { "id_tentative": 33, "statut": "ECHOUEE", "note": 25, "date_soumission": "...", "date_correction": null, "created_at": "..." },
-      { "id_tentative": 34, "statut": "REUSSIE", "note": 100, "date_soumission": "...", "date_correction": "...", "created_at": "..." }
+      { "id_tentative": 33, "statut": "ECHOUEE", "note": 25, "date_soumission": "...", "created_at": "..." },
+      { "id_tentative": 34, "statut": "REUSSIE", "note": 100, "date_soumission": "...", "created_at": "..." }
     ]
   }
 }
@@ -870,44 +878,6 @@ Historique de l'étudiant courant sur un quiz (quiz accessible requis).
 Détail d'une tentative (ligne enrichie : nom/prénom/email étudiant + titre quiz +
 score_reussite). Propriétaire ou ADM (assertPersonalAccess). **Erreurs** : 404 · 403.
 
-### PATCH /api/attempts/:id/corriger
-
-Correction manuelle des réponses libres.
-
-**Rôles** : FOR **propriétaire du quiz**, ADM.
-
-**Conditions** : tentative à l'état `A_CORRIGER` (sinon 409).
-
-**Body**
-
-| Champ | Type | Règles |
-|-------|------|--------|
-| notes | array | corrections appliquées |
-| notes[].id_reponse_etudiant | int | requis — ligne de `GET /student-answers/attempt/:id` |
-| notes[].note | number | requis — entre 0 et `points_question` de la ligne (sinon 409) |
-
-**Exemple requête**
-
-```json
-{ "notes": [ { "id_reponse_etudiant": 58, "note": 1 } ] }
-```
-
-**Comportement** : note finale recalculée intégralement côté serveur ;
-`REUSSIE`/`ECHOUEE` vs seuil ; notification étudiant ; progression recalculée.
-
-**Réponse 200**
-
-```json
-{
-  "success": true,
-  "message": "Tentative corrigée avec succès.",
-  "data": { "id_tentative": 34, "statut": "REUSSIE", "note": 100, "score_reussite": 50 }
-}
-```
-
-**Erreurs** : 403 non propriétaire (« Seul le formateur propriétaire… ») · 404 ·
-409 mauvais état / note hors bornes / réponse étrangère / question non LIBRE.
-
 ---
 
 ## Réponses étudiants `/api/student-answers`
@@ -915,12 +885,12 @@ Correction manuelle des réponses libres.
 Lecture seule. Chaque ligne :
 `{ id_reponse_etudiant, id_tentative, id_utilisateur, id_quiz, id_question,
 question, type_question, points_question, id_reponse, reponse_choisie,
-est_correcte, reponse_libre, note }`.
+est_correcte }`.
 
-**Cloisonnement du corrigé** : `est_correcte`, `reponse_choisie` et la note
-détaillée ne sont visibles que si l'appelant peut voir la correction
-(formateur propriétaire du quiz ou ADM) ; un étudiant voit ses propres lignes
-**sans** éléments de correction.
+**Cloisonnement du corrigé** : `est_correcte` n'est visible que si l'appelant
+peut voir la correction (formateur propriétaire du quiz ou ADM) ; un étudiant
+voit ses propres lignes **sans** `est_correcte`. Les champs `reponse_libre` et
+`note` n'existent plus (question/réponse libres retirées du produit).
 
 ### GET /api/student-answers
 
@@ -1189,9 +1159,9 @@ expéditeur imposé au token pour tout non-admin).
 Notification générée automatiquement : `{ id_notification, id_utilisateur, titre, contenu, lu (0/1), created_at }`.
 
 Déclencheurs automatiques existants : inscription formation (« Nouvel étudiant
-inscrit »), message (« Nouveau message »), tentative avec réponse libre
-(« Tentative à corriger »), correction (« Quiz validé » / « Quiz corrigé »),
-résultat auto-corrigé (« Quiz réussi » / « Quiz échoué »), avis (« Nouvel avis »).
+inscrit »), message (« Nouveau message »), résultat auto-corrigé (« Quiz réussi »
+/ « Quiz échoué ») — notification immédiate à l'étudiant à la soumission, avis
+(« Nouvel avis »).
 
 ### GET /api/notifications
 
@@ -1283,8 +1253,8 @@ GET /api/files/lecon-intro.pdf?token=<JWT>
 | Quiz | ETD si accessible ; ADM/FOR | ADM, FOR proprio | ADM, FOR | ADM, FOR |
 | Questions | ETD (sans corrigé) ; ADM/FOR | ADM, FOR proprio | ADM, FOR (type figé) | ADM, FOR |
 | Answers | ETD (sans `est_correcte`) ; ADM/FOR | ADM, FOR proprio | ADM, FOR | ADM, FOR |
-| Attempts | ETD (siennes/historique) ; FOR (ses étudiants) ; ADM | ETD (start/submit) | FOR proprio, ADM (corriger) | — (pas de route DELETE publique) |
-| Student-answers | lecture seule (cloisonnement corrigé) | — (via submit) | — (via corriger) | — |
+| Attempts | ETD (siennes/historique) ; FOR (ses étudiants) ; ADM | ETD (start/submit) | — (correction automatique au submit) | — (pas de route DELETE publique) |
+| Student-answers | lecture seule (cloisonnement corrigé) | — (via submit) | — (correction automatique) | — |
 | Enrollments | ADM/FOR (listes) ; soi-même | ADM, FOR, ETD (auto-inscription PUBLIEE) | — | propriétaire ou ADM |
 | Progressions | lecture seule (scopes) | — | — | — (recompute ADM) |
 | Reviews | ADM (global) ; par user/formation | inscrit (auteur imposé) | auteur, ADM | auteur, ADM |

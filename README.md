@@ -165,10 +165,7 @@ Chaque chapitre peut être associé à un quiz selon les règles du backend.
 
 Le quiz constitue l'évaluation du chapitre.
 
-Il peut contenir notamment :
-
-- questions à choix multiple ;
-- questions libres.
+Il contient uniquement des questions à choix multiple.
 
 ---
 
@@ -196,31 +193,7 @@ La bonne réponse ne doit jamais être exposée à l'étudiant avant la correcti
 
 ---
 
-# 8. CORRECTION DES QUESTIONS LIBRES
-
-Pour une question libre :
-
-Étudiant
-↓
-répond
-↓
-soumet
-↓
-tentative à corriger
-↓
-formateur propriétaire
-↓
-correction
-↓
-note
-↓
-réussite ou échec
-
-L'étudiant ne peut pas modifier lui-même sa note.
-
----
-
-# 9. TENTATIVES
+# 8. TENTATIVES
 
 Une tentative représente le passage d'un quiz.
 
@@ -228,19 +201,17 @@ Son cycle peut être :
 
 EN_COURS
 ↓
-SOUMISE
-ou
-A_CORRIGER
-↓
 REUSSIE
 ou
 ECHOUEE
+
+La correction est 100 % automatique côté serveur : toute question est à choix multiple, il n'existe ni question libre ni correction manuelle par le formateur.
 
 Le serveur reste responsable de la validation de l'état.
 
 ---
 
-# 10. REPASSAGE
+# 9. REPASSAGE
 
 Lorsqu'un étudiant échoue à un quiz, il peut le repasser selon les règles backend.
 

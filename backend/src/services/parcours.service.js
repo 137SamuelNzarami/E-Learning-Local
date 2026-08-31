@@ -109,6 +109,40 @@ class ParcoursService {
    * Calculé uniquement à partir de données réelles (jamais envoyé par
    * le frontend).
    */
+  async getChapterContext(id_chapitre, user) {
+    const chapter = await this.assertChapterAccessible(id_chapitre, user);
+
+    const all = await ChapterRepository.findByFormation(chapter.id_formation);
+
+    let index = -1;
+    for (let i = 0; i < all.length; i++) {
+      if (Number(all[i].id_chapitre) === Number(id_chapitre)) {
+        index = i;
+        break;
+      }
+    }
+
+    const valide = await this.isChapterValidated(id_chapitre, user.id);
+
+    const suivant =
+      index >= 0 && index < all.length - 1
+        ? {
+            id_chapitre: all[index + 1].id_chapitre,
+            titre: all[index + 1].titre,
+            ordre: all[index + 1].ordre,
+          }
+        : null;
+
+    const dernier_chapitre = index !== -1 && index === all.length - 1;
+
+    return {
+      ...chapter,
+      valide,
+      suivant,
+      dernier_chapitre,
+    };
+  }
+
   async computePourcentage(id_formation, id_utilisateur) {
     const chapters = await ChapterRepository.findByFormation(id_formation);
 
