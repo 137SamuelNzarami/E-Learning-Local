@@ -1,0 +1,5 @@
+Installation de Laravel avec Composer:
+composer create-project laravel/laravel monProjet
+
+Démarrer le serveur :
+php artisan serve
