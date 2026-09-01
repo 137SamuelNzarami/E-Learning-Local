@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
-import { useOutletContext, useParams } from "react-router-dom";
+import { useOutletContext, useParams, useSearchParams } from "react-router-dom";
 import Card from "../../components/ui/Card";
 import Spinner from "../../components/ui/Spinner";
 import Modal from "../../components/ui/Modal";
@@ -9,6 +9,7 @@ import Badge from "../../components/ui/Badge";
 import FieldError, { FormAlert } from "../../components/ui/FieldError";
 import RichTextEditor, { MAX_CONTENU } from "../../components/editor/RichTextEditor";
 import RichTextRenderer from "../../components/content/RichTextRenderer";
+import ChapterQuizManager from "../../components/quiz/ChapterQuizManager";
 import { chapterServiceExtended } from "../../services/chapterService";
 import { sectionServiceExtended } from "../../services/sectionService";
 import { sousSectionServiceExtended } from "../../services/sousSectionService";
@@ -18,6 +19,7 @@ import { Icons } from "../../components/Icons";
 
 export default function FormationBuilder() {
   const { id } = useParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const {
     formation,
     chapters,
@@ -56,6 +58,29 @@ export default function FormationBuilder() {
       }));
     }
   }, [formation?.id_formation]);
+
+  // Quand on arrive depuis /formateur/quizzes?chapitre=<id>,
+  // faire défiler vers le chapitre ciblé et le mettre en évidence.
+  useEffect(() => {
+    if (!formation || !chapters.length) return;
+    const target = Number(searchParams.get("chapitre"));
+    if (!target) return;
+    const found = chapters.find((c) => Number(c.id_chapitre) === target);
+    if (!found) return;
+    const t = setTimeout(() => {
+      document
+        .getElementById(`chapitre-${target}`)
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+      const el = document.getElementById(`chapitre-${target}`);
+      if (el) {
+        el.classList.add("ring-2", "ring-brand-300", "rounded-2xl");
+        setTimeout(() => el.classList.remove("ring-2", "ring-brand-300", "rounded-2xl"), 4000);
+      }
+    }, 150);
+    setSearchParams({}, { replace: true });
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formation, chapters.length]);
 
   const openCreate = (kind, parentId = null) => {
     setModal({ kind, parentId, item: null });
@@ -279,7 +304,7 @@ export default function FormationBuilder() {
           {chapters.map((chapter, idx) => {
             const sections = sectionsByChapter[chapter.id_chapitre] || [];
             return (
-              <div key={chapter.id_chapitre}>
+              <div key={chapter.id_chapitre} id={`chapitre-${chapter.id_chapitre}`}>
                 <div className="flex items-center gap-3 px-5 py-3 sm:px-6 hover:bg-slate-50/50 transition-base">
                   <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-brand-100 text-[11px] font-bold text-brand-700">
                     {idx + 1}
@@ -354,6 +379,10 @@ export default function FormationBuilder() {
                   <button type="button" className="btn-ghost !py-1 !text-[11px] text-brand-600" onClick={() => openCreate("section", chapter.id_chapitre)}>
                     <Icons.plus className="h-3 w-3" /> Section
                   </button>
+                </div>
+
+                <div className="border-t border-slate-50 bg-slate-50/30 px-5 py-3 sm:px-6">
+                  <ChapterQuizManager chapter={chapter} onNotice={setNotice} />
                 </div>
               </div>
             );
