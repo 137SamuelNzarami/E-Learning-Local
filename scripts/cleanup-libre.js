@@ -13,7 +13,7 @@
 const mysql = require('mysql2/promise');
 
 (async () => {
-  const c = await mysql.createConnection({ host: 'localhost', port: 3306, user: 'root', password: '', database: 'freedb_Hs3YIOUt' });
+  const c = await mysql.createConnection({ host: 'sql.freedb.tech', port: 3306, user: 'u_vKXPJU', password: 'nZeE0W2P1Ftr', database: 'freedb_Hs3YiOUt' });
 
   const [libres] = await c.query(`
     SELECT qst.id_question, qst.enonce, qst.id_quiz, quiz.titre AS quiz, quiz.id_chapitre

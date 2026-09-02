@@ -1,6 +1,6 @@
 import mysql from "mysql2/promise";
 
-const c = await mysql.createConnection({ host: "localhost", user: "root", password: "", database: "freedb_Hs3YIOUt" });
+const c = await mysql.createConnection({ host: "sql.freedb.tech", user: "u_vKXPJU", password: "nZeE0W2P1Ftr", database: "freedb_Hs3YiOUt" });
 const q = async (sql) => { const [r] = await c.query(sql); return r; };
 const h = (t) => console.log("\n" + "=".repeat(60) + "\n" + t + "\n" + "=".repeat(60));
 let errors = 0;

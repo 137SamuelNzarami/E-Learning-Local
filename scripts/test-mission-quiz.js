@@ -57,8 +57,8 @@ async function login(page, email, mp) {
 
 async function db() {
   const conn = await mysql.createConnection({
-    host: 'localhost', port: 3306, user: 'root', password: '',
-    database: 'freedb_Hs3YIOUt',
+    host: 'sql.freedb.tech', port: 3306, user: 'u_vKXPJU', password: 'nZeE0W2P1Ftr',
+    database: 'freedb_Hs3YiOUt',
   });
   return conn;
 }

@@ -1,6 +1,6 @@
 const mysql = require("mysql2/promise");
 (async () => {
-  const c = await mysql.createConnection({ host: "localhost", user: "root", database: "freedb_Hs3YIOUt" });
+  const c = await mysql.createConnection({ host: "sql.freedb.tech", user: "u_vKXPJU", password: "nZeE0W2P1Ftr", database: "freedb_Hs3YiOUt" });
   const [fs] = await c.query("SELECT id_formation, titre, statut FROM formations WHERE titre LIKE ?", ["%RTE E2E%"]);
   const [chs] = await c.query(
     "SELECT c.id_chapitre, c.titre, c.id_formation FROM chapitres c JOIN formations f USING(id_formation) WHERE f.titre LIKE ?",

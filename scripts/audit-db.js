@@ -1,7 +1,7 @@
 const mysql = require('mysql2/promise');
 
 (async () => {
-  const c = await mysql.createConnection({ host: 'localhost', port: 3306, user: 'root', password: '', database: 'freedb_Hs3YIOUt' });
+  const c = await mysql.createConnection({ host: 'localhost', port: 3306, user: 'root', password: '', database: 'freedb_Hs3YziOUt' });
   const [qui] = await c.query(`
     SELECT q.id_quiz, q.titre AS quiz,
       COUNT(CASE WHEN qst.type='LIBRE' THEN 1 END) AS libres,

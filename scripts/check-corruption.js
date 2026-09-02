@@ -1,9 +1,9 @@
 const mysql = require('mysql2');
-const conn = mysql.createConnection({ host: 'localhost', port: 3306, user: 'root', password: '', database: 'freedb_Hs3YIOUt', charset: 'utf8mb4' });
+const conn = mysql.createConnection({ host: 'sql.freedb.tech', port: 3306, user: 'u_vKXPJU', password: 'nZeE0W2P1Ftr', database: 'freedb_Hs3YiOUt', charset: 'utf8mb4' });
 
 const tables = ['sections','chapitres','formations','quiz','questions','reponses','categories','avis','progression_chapitres'];
 
-conn.query(`SELECT TABLE_NAME, COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='freedb_Hs3YIOUt' AND DATA_TYPE IN ('varchar','text','longtext','mediumtext','char') ORDER BY TABLE_NAME, ORDINAL_POSITION`, (e1, rows) => {
+conn.query(`SELECT TABLE_NAME, COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='freedb_Hs3YiOUt' AND DATA_TYPE IN ('varchar','text','longtext','mediumtext','char') ORDER BY TABLE_NAME, ORDINAL_POSITION`, (e1, rows) => {
   if (e1) { console.error('ERR:', e1.message); process.exit(1); }
   const byTable = {};
   rows.forEach(r => { (byTable[r.TABLE_NAME] = byTable[r.TABLE_NAME] || []).push(r.COLUMN_NAME); });

@@ -2,7 +2,7 @@ import mysql from "mysql2/promise";
 import { readdirSync, statSync } from "fs";
 import { join } from "path";
 
-const c = await mysql.createConnection({ host: "localhost", user: "root", password: "", database: "freedb_Hs3YIOUt" });
+const c = await mysql.createConnection({ host: "sql.freedb.tech", user: "u_vKXPJU", password: "nZeE0W2P1Ftr", database: "freedb_Hs3YiOUt" });
 const TARGET = "(3,7,8,9,10,11,12)";
 const STUDENTS = "(7,8,9,10,11,12)";
 
@@ -14,7 +14,7 @@ for (const u of await q(`SELECT id_utilisateur, email, nom, prenom, id_role FROM
   console.log(`  id=${u.id_utilisateur} ${u.prenom} ${u.nom} <${u.email}> role=${u.id_role}`);
 
 h("A2 — CLÉS ÉTRANGÈRES");
-const fks = await q(`SELECT TABLE_NAME, COLUMN_NAME, REFERENCED_TABLE_NAME, REFERENCED_COLUMN_NAME FROM information_schema.KEY_COLUMN_USAGE WHERE REFERENCED_TABLE_SCHEMA = 'freedb_Hs3YIOUt' ORDER BY REFERENCED_TABLE_NAME, TABLE_NAME`);
+const fks = await q(`SELECT TABLE_NAME, COLUMN_NAME, REFERENCED_TABLE_NAME, REFERENCED_COLUMN_NAME FROM information_schema.KEY_COLUMN_USAGE WHERE REFERENCED_TABLE_SCHEMA = 'freedb_Hs3YiOUt' ORDER BY REFERENCED_TABLE_NAME, TABLE_NAME`);
 const byRef = {};
 for (const fk of fks) {
   const key = fk.REFERENCED_TABLE_NAME;

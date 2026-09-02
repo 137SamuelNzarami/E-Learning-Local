@@ -356,7 +356,7 @@ function EtudiantDashboard() {
       {/* Hero */}
       <div className="rounded-2xl gradient-hero p-6 text-white sm:p-8">
         <h1 className="text-2xl font-bold">
-          Bonjour, {user?.prenom} 👋
+          Bonjour, {user?.prenom} 
         </h1>
         <p className="mt-1 text-sm text-white/80">
           {enrollments.length === 0

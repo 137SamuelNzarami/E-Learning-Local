@@ -1,6 +1,6 @@
 const mysql = require('D:/E-LearnigLocal/backend/node_modules/mysql2/promise');
 (async () => {
-  const conn = await mysql.createConnection({ host: 'localhost', port: 3306, user: 'root', password: '', database: 'freedb_Hs3YIOUt' });
+  const conn = await mysql.createConnection({ host: 'sql.freedb.tech', port: 3306, user: 'u_vKXPJU', password: 'nZeE0W2P1Ftr', database: 'freedb_Hs3YiOUt' });
   const out = {};
 
   const [rc] = await conn.query("SHOW COLUMNS FROM reponses_etudiants");
