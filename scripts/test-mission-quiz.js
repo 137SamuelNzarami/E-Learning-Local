@@ -58,7 +58,7 @@ async function login(page, email, mp) {
 async function db() {
   const conn = await mysql.createConnection({
     host: 'localhost', port: 3306, user: 'root', password: '',
-    database: 'elearningdb',
+    database: 'freedb_Hs3YIOUt',
   });
   return conn;
 }

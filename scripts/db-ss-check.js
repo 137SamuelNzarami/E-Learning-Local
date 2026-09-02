@@ -1,6 +1,6 @@
 const mysql = require("mysql2/promise");
 (async () => {
-  const c = await mysql.createConnection({ host: "localhost", user: "root", database: "elearningdb" });
+  const c = await mysql.createConnection({ host: "localhost", user: "root", database: "freedb_Hs3YIOUt" });
   const [rows] = await c.query(
     "SELECT ss.titre, ss.contenu FROM sous_sections ss JOIN sections s USING(id_section) JOIN chapitres ch USING(id_chapitre) JOIN formations f USING(id_formation) WHERE f.titre = 'Formation RTE E2E' AND ss.titre LIKE 'Sous-section%'"
   );

@@ -9,7 +9,7 @@ const GRACE_CHAPITRES = "(6, 7, 11)";
 const GRACE_LECONS = "(6, 7, 11)";
 const GRACE_QUIZ = "(6, 7, 11)";
 
-const c = await mysql.createConnection({ host: "localhost", user: "root", password: "", database: "elearningdb" });
+const c = await mysql.createConnection({ host: "localhost", user: "root", password: "", database: "freedb_Hs3YIOUt" });
 c.config.timezone = "+00:00";
 
 const q = async (sql, label) => {

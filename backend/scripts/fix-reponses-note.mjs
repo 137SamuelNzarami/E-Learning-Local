@@ -4,7 +4,7 @@ const c = await mysql.createConnection({
   host: "localhost",
   user: "root",
   password: "",
-  database: "elearningdb",
+  database: "freedb_Hs3YIOUt",
 });
 
 const [cols] = await c.query("SHOW COLUMNS FROM reponses_etudiants");
