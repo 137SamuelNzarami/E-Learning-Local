@@ -67,24 +67,24 @@ app.get("/", (req, res) => {
 });
 
 app.get("/api/test-db", async (req, res) => {
+  let connection;
   try {
-    const connection = await pool.getConnection();
-
+    connection = await pool.getConnection();
     await connection.ping();
-
-    connection.release();
-
     res.json({
       success: true,
       message: "Connexion à la base de données réussie.",
     });
   } catch (error) {
-    console.error(error);
-
+    console.error("Erreur test-db:", error);
     res.status(500).json({
       success: false,
       message: "Impossible de se connecter à la base de données.",
     });
+  } finally {
+    if (connection) {
+      connection.release();
+    }
   }
 });
 

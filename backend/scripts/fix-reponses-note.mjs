@@ -1,10 +1,11 @@
 import mysql from "mysql2/promise";
+import { env } from "./env.js";
 
 const c = await mysql.createConnection({
-  host: "sql.freedb.tech",
-  user: "u_vKXPJU",
-  password: "nZeE0W2P1Ftr",
-  database: "freedb_Hs3YiOUt",
+  host: env.db.host,
+  user: env.db.user,
+  password: env.db.password,
+  database: env.db.database,
 });
 
 const [cols] = await c.query("SHOW COLUMNS FROM reponses_etudiants");

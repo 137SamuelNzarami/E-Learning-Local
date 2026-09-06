@@ -1,4 +1,5 @@
 import mysql from "mysql2/promise";
+import { env } from "./env.js";
 
 const TARGET = "(3, 8, 9, 10, 11, 12)";
 const STUDENTS_NO7 = "(8, 9, 10, 11, 12)";
@@ -9,17 +10,24 @@ const GRACE_CHAPITRES = "(6, 7, 11)";
 const GRACE_LECONS = "(6, 7, 11)";
 const GRACE_QUIZ = "(6, 7, 11)";
 
-const c = await mysql.createConnection({ host: "sql.freedb.tech", user: "u_vKXPJU", password: "nZeE0W2P1Ftr", database: "freedb_Hs3YiOUt" });
+const c = await mysql.createConnection({
+  host: env.db.host,
+  user: env.db.user,
+  password: env.db.password,
+  database: env.db.database,
+});
 c.config.timezone = "+00:00";
 
 const q = async (sql, label) => {
   const [r] = await c.query(sql);
-  if (r.affectedRows > 0) console.log(`  ✓ ${label}: ${r.affectedRows} ligne(s) supprimée(s)`);
+  if (r.affectedRows > 0)
+    console.log(`  ✓ ${label}: ${r.affectedRows} ligne(s) supprimée(s)`);
   else console.log(`  · ${label}: 0 ligne`);
   return r.affectedRows;
 };
 
-const h = (t) => console.log("\n" + "=".repeat(60) + "\n" + t + "\n" + "=".repeat(60));
+const h = (t) =>
+  console.log("\n" + "=".repeat(60) + "\n" + t + "\n" + "=".repeat(60));
 let totalDeleted = 0;
 
 try {
@@ -31,27 +39,27 @@ try {
 
   totalDeleted += await q(
     `DELETE re FROM reponses_etudiants re INNER JOIN tentatives t ON re.id_tentative = t.id_tentative WHERE t.id_utilisateur IN ${STUDENTS_NO7}`,
-    "reponses_etudiants (via tentatives étudiants)"
+    "reponses_etudiants (via tentatives étudiants)",
   );
 
   totalDeleted += await q(
     `DELETE FROM tentatives WHERE id_utilisateur IN ${STUDENTS_NO7}`,
-    "tentatives étudiants"
+    "tentatives étudiants",
   );
 
   totalDeleted += await q(
     `DELETE FROM soumissions WHERE id_utilisateur IN ${STUDENTS_NO7}`,
-    "soumissions étudiants"
+    "soumissions étudiants",
   );
 
   totalDeleted += await q(
     `DELETE FROM progression_lecons WHERE id_utilisateur IN ${STUDENTS_NO7}`,
-    "progression_lecons étudiants"
+    "progression_lecons étudiants",
   );
 
   totalDeleted += await q(
     `DELETE FROM notifications WHERE id_utilisateur IN ${STUDENTS_NO7}`,
-    "notifications étudiants"
+    "notifications étudiants",
   );
 
   // ─── PHASE 2 — Activité de Grace (id=3) ───
@@ -59,7 +67,7 @@ try {
 
   totalDeleted += await q(
     `DELETE FROM notifications WHERE id_utilisateur = ${GRACE_ID}`,
-    "notifications Grace"
+    "notifications Grace",
   );
 
   // ─── PHASE 3 — Cascade formations de Grace (enfants avant parents) ───
@@ -68,49 +76,49 @@ try {
   // 3a. reponses → questions → quiz (chain FK la plus profonde)
   totalDeleted += await q(
     `DELETE r FROM reponses r INNER JOIN questions q ON r.id_question = q.id_question INNER JOIN quiz qz ON q.id_quiz = qz.id_quiz WHERE qz.id_lecon IN ${GRACE_LECONS}`,
-    "reponses (quiz de Grace)"
+    "reponses (quiz de Grace)",
   );
 
   totalDeleted += await q(
     `DELETE q FROM questions q INNER JOIN quiz qz ON q.id_quiz = qz.id_quiz WHERE qz.id_lecon IN ${GRACE_LECONS}`,
-    "questions (quiz de Grace)"
+    "questions (quiz de Grace)",
   );
 
   totalDeleted += await q(
     `DELETE FROM quiz WHERE id_lecon IN ${GRACE_LECONS}`,
-    "quiz (leçons de Grace)"
+    "quiz (leçons de Grace)",
   );
 
   // 3b. contenus des leçons
   totalDeleted += await q(
     `DELETE FROM videos WHERE id_lecon IN ${GRACE_LECONS}`,
-    "videos (leçons de Grace)"
+    "videos (leçons de Grace)",
   );
 
   totalDeleted += await q(
     `DELETE FROM documents WHERE id_lecon IN ${GRACE_LECONS}`,
-    "documents (leçons de Grace)"
+    "documents (leçons de Grace)",
   );
 
   totalDeleted += await q(
     `DELETE FROM devoirs WHERE id_lecon IN ${GRACE_LECONS}`,
-    "devoirs (leçons de Grace)"
+    "devoirs (leçons de Grace)",
   );
 
   // 3c. leçons → chapitres → modules → formations
   totalDeleted += await q(
     `DELETE FROM lecons WHERE id_chapitre IN ${GRACE_CHAPITRES}`,
-    "leçons (chapitres de Grace)"
+    "leçons (chapitres de Grace)",
   );
 
   totalDeleted += await q(
     `DELETE FROM chapitres WHERE id_module IN ${GRACE_MODULES}`,
-    "chapitres (modules de Grace)"
+    "chapitres (modules de Grace)",
   );
 
   totalDeleted += await q(
     `DELETE FROM modules WHERE id_formation IN ${GRACE_FORMATIONS}`,
-    "modules (formations de Grace)"
+    "modules (formations de Grace)",
   );
 
   // ─── PHASE 4 — Références aux formations de Grace (AVANT suppression formations) ───
@@ -118,28 +126,28 @@ try {
 
   totalDeleted += await q(
     `DELETE FROM avis WHERE id_formation IN ${GRACE_FORMATIONS}`,
-    "avis sur formations de Grace"
+    "avis sur formations de Grace",
   );
 
   totalDeleted += await q(
     `DELETE FROM inscriptions WHERE id_formation IN ${GRACE_FORMATIONS}`,
-    "inscriptions aux formations de Grace"
+    "inscriptions aux formations de Grace",
   );
 
   totalDeleted += await q(
     `DELETE FROM progressions WHERE id_formation IN ${GRACE_FORMATIONS}`,
-    "progressions formations de Grace"
+    "progressions formations de Grace",
   );
 
   totalDeleted += await q(
     `DELETE FROM progression_lecons WHERE id_lecon IN ${GRACE_LECONS}`,
-    "progression_lecons leçons de Grace"
+    "progression_lecons leçons de Grace",
   );
 
   // 3d. Supprimer les formations
   totalDeleted += await q(
     `DELETE FROM formations WHERE id_formation IN ${GRACE_FORMATIONS}`,
-    "formations de Grace"
+    "formations de Grace",
   );
 
   // ─── PHASE 5 — Conversations ───
@@ -147,18 +155,18 @@ try {
 
   totalDeleted += await q(
     `DELETE FROM messages WHERE id_expediteur IN ${TARGET}`,
-    "messages envoyés par cibles"
+    "messages envoyés par cibles",
   );
 
   totalDeleted += await q(
     `DELETE FROM participant_conversations WHERE id_utilisateur IN ${TARGET}`,
-    "participants ciblés dans conversations"
+    "participants ciblés dans conversations",
   );
 
   // Supprimer les conversations orphelines (sans aucun participant)
   totalDeleted += await q(
     `DELETE c FROM conversations c LEFT JOIN participant_conversations pc ON c.id_conversation = pc.id_conversation WHERE pc.id_conversation IS NULL`,
-    "conversations orphelines (0 participants)"
+    "conversations orphelines (0 participants)",
   );
 
   // ─── PHASE 6 — Données résiduelles des utilisateurs cibles ───
@@ -166,27 +174,27 @@ try {
 
   totalDeleted += await q(
     `DELETE FROM avis WHERE id_utilisateur IN ${TARGET}`,
-    "avis résiduels cibles"
+    "avis résiduels cibles",
   );
 
   totalDeleted += await q(
     `DELETE FROM inscriptions WHERE id_utilisateur IN ${TARGET}`,
-    "inscriptions résiduelles cibles"
+    "inscriptions résiduelles cibles",
   );
 
   totalDeleted += await q(
     `DELETE FROM progressions WHERE id_utilisateur IN ${TARGET}`,
-    "progressions résiduelles cibles"
+    "progressions résiduelles cibles",
   );
 
   totalDeleted += await q(
     `DELETE FROM progression_lecons WHERE id_utilisateur IN ${TARGET}`,
-    "progression_lecons résiduelles cibles"
+    "progression_lecons résiduelles cibles",
   );
 
   totalDeleted += await q(
     `DELETE FROM notifications WHERE id_utilisateur IN ${TARGET}`,
-    "notifications résiduelles cibles"
+    "notifications résiduelles cibles",
   );
 
   // ─── PHASE 7 — Suppression des utilisateurs ───
@@ -194,14 +202,13 @@ try {
 
   totalDeleted += await q(
     `DELETE FROM utilisateurs WHERE id_utilisateur IN ${TARGET}`,
-    "utilisateurs cibles"
+    "utilisateurs cibles",
   );
 
   // ─── COMMIT ───
   await c.commit();
   h("TRANSACTION COMMITTÉE");
   console.log(`\n  TOTAL: ${totalDeleted} ligne(s) supprimée(s)`);
-
 } catch (err) {
   console.error("\n❌ ERREUR — ROLLBACK EN COURS");
   console.error(`  Code: ${err.code}`);
