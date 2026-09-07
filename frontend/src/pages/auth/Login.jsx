@@ -71,7 +71,7 @@ export default function Login() {
                 type="email"
                 autoComplete="email"
                 className="input"
-                placeholder="vous@exemple.fr"
+                placeholder="ben@gmail.com"
                 value={form.email}
                 onChange={update("email")}
               />

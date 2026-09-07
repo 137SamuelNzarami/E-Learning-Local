@@ -66,18 +66,18 @@ export default function Register() {
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <label htmlFor="prenom" className="label">Prénom</label>
-                <input id="prenom" className="input" placeholder="Marie" value={form.prenom} onChange={update("prenom")} />
+                <input id="prenom" className="input" placeholder="Béniction" value={form.prenom} onChange={update("prenom")} />
                 <FieldError error={error} name="prenom" />
               </div>
               <div>
                 <label htmlFor="nom" className="label">Nom</label>
-                <input id="nom" className="input" placeholder="Dupont" value={form.nom} onChange={update("nom")} />
+                <input id="nom" className="input" placeholder="Katsuva" value={form.nom} onChange={update("nom")} />
                 <FieldError error={error} name="nom" />
               </div>
             </div>
             <div>
               <label htmlFor="email" className="label">Adresse e-mail</label>
-              <input id="email" type="email" autoComplete="email" className="input" placeholder="vous@exemple.fr" value={form.email} onChange={update("email")} />
+              <input id="email" type="email" autoComplete="email" className="input" placeholder="ben@gmail.com" value={form.email} onChange={update("email")} />
               <FieldError error={error} name="email" />
             </div>
             <div>
