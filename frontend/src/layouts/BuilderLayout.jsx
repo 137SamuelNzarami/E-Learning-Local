@@ -105,7 +105,17 @@ export default function BuilderLayout() {
   }, [sectionsByChapter, loadSections]);
 
   const handleSelect = useCallback((target) => {
-    setSelectTarget(target);
+    // Les nœuds du sidebar ne transportent que { kind, item }. On reconstruit
+    // selectTarget avec le parentId réel pour que l'enregistrement dans
+    // FormationBuilder puisse recharger le bon sous-arbre (sinon le save
+    // exécute loadSections(null → 0) et la modale ne se ferme jamais).
+    const enriched =
+      target.kind === "section"
+        ? { ...target, parentId: Number(target.item.id_chapitre) }
+        : target.kind === "sous"
+          ? { ...target, parentId: Number(target.item.id_section) }
+          : target;
+    setSelectTarget(enriched);
     if (target.kind === "chapter" && !sectionsByChapter[target.item.id_chapitre]) {
       loadSections(target.item.id_chapitre);
     }

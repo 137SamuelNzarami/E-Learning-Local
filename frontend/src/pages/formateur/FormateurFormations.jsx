@@ -270,7 +270,7 @@ function CreateFormationModal({ categories, onClose, onCreated }) {
             >
               <option value="">Sans catégorie</option>
               {categories.map((c) => (
-                <option key={c.id_categorie} value={c.id_categorie}>{c.nom}</option>
+                <option key={c.id_categorie} value={c.id_categorie}>{c.nom_categorie ?? c.nom}</option>
               ))}
             </select>
           </div>

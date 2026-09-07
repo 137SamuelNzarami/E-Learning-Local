@@ -68,6 +68,88 @@ export function resolveMediaUrl(url, token) {
   return buildFileUrl(value, token);
 }
 
+/**
+ * Injecte le ?token= sur les fichiers protégés d'un DOM (éditeur TipTap).
+ *
+ * Couvre TOUS les éléments exploités par le formateur :
+ *   - <img src>      → image ;
+ *   - <video src> / <source src> → vidéo (lecture immédiate) ;
+ *   - <a href>       → document (lien/ouverture immédiate).
+ *
+ * - Opération idempotente : un URL déjà pourvu d'un token est ignoré.
+ * - Volatile par conception : elle ne modifie QUE le DOM affiché. Elle ne
+ *   touche JAMAIS aux attributs du document TipTap, donc le HTML persisté
+ *   (editor.getHTML()) conserve l'URL relative `/api/files/<nom>`, sans JWT.
+ * - n'atteint que les URLs protégées (`/api/files/...`) ; les liens externes
+ *   et tout autre attribut restent inchangés.
+ *
+ * Retourne le nombre d'URLs réécrites.
+ */
+export function tokenizeMediaUrlsInDom(rootEl, token) {
+  if (typeof document === "undefined") return 0;
+  let root =
+    rootEl && rootEl.querySelectorAll ? rootEl : null;
+  if (typeof rootEl === "string" && !root) {
+    root = document.querySelector(rootEl);
+  }
+  if (!root || !token) return 0;
+
+  let changed = 0;
+  root
+    .querySelectorAll("img[src], video[src], source[src], a[href]")
+    .forEach((el) => {
+      const attr = el.tagName === "A" ? "href" : "src";
+      const value = String(el.getAttribute(attr) ?? "").trim();
+      if (!value || !isProtectedFileUrl(value) || value.includes("token=")) {
+        return;
+      }
+      const resolved = buildFileUrl(value, token);
+      if (resolved) {
+        el.setAttribute(attr, resolved);
+        changed++;
+      }
+    });
+  return changed;
+}
+
+/* ------------------------------------------------------------------ */
+/* Éditeur TipTap : tokens DANS le document ProseMirror                */
+/* ------------------------------------------------------------------ */
+
+/**
+ * TUTORE stocke des URL RELATIVES `/api/files/<nom>` (jamais de JWT en base).
+ * Pour un aperçu immédiat dans l'éditeur (sans enregistrement ni rechargement),
+ * on injecte l'URL absolue + ?token= dans le HTML AVANT setContent : le token
+ * vit alors dans le DOCUMENT ProseMirror (source de vérité), est rendu
+ * nativement par TipTap et survit aux re-rendus — sans jamais toucher au DOM,
+ * donc sans conflit de réconciliation (origine des boucles de rendu infinies).
+ */
+const URL_ATTR_RE = /((?:src|href)=")((?:https?:)?\/\/[^"]*?)?(\/api\/files\/[^"?#]+)(\?token=[^"]+)?(")/g;
+
+/**
+ * HTML d'ENTRÉE (stocké, relatif) → HTML chargé dans l'éditeur (absolu + ?token=).
+ * Idempotent : une URL déjà dotée d'un token est simplement reconstruite.
+ */
+export function prepareRichTextForEditor(html, token) {
+  const value = String(html ?? "");
+  if (!isProtectedFilePath(value)) return value;
+  return value.replace(URL_ATTR_RE, (m, pre, origin, filePath) => pre + buildFileUrl((origin || "") + filePath, token) + '"');
+}
+
+/**
+ * HTML de SORTIE (editor.getHTML(), absolu + ?token=) → HTML à PERSISTER
+ * (relatif, sans JWT). Convertit aussi les absolus sans token en relatifs.
+ */
+export function stripTokensFromRichText(html) {
+  const value = String(html ?? "");
+  if (!/[a-z]*api\/files\//i.test(value)) return value;
+  return value.replace(URL_ATTR_RE, (m, pre, origin, filePath) => pre + filePath + '"');
+}
+
+function isProtectedFilePath(html) {
+  return /(?:^|\/|"|')(?:api\/files\/)/i.test(html);
+}
+
 /* ------------------------------------------------------------------ */
 /* Sanitation                                                          */
 /* ------------------------------------------------------------------ */
@@ -219,7 +301,10 @@ function escapeHtml(value) {
 }
 
 function documentCardHtml(filename, downloadUrl, info) {
-  const prettyName = filename.replace(/^\d{13}-/, "").replace(/\.[^.]+$/, "").replace(/-/g, " ");
+  const prettyName = filename
+    .replace(/^(\d+-)?\d{13}-/, "")
+    .replace(/\.[^.]+$/, "")
+    .replace(/-/g, " ");
   return `
     <span class="doc-card">
       <span class="doc-card__icon" aria-hidden="true">

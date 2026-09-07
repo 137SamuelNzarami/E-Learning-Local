@@ -42,11 +42,30 @@ class FileAccessService {
     const row = sousRow || sectionRow;
 
     if (!row) {
-      return { allowed: false, type: null };
+      // Prévisualisation immédiate après upload : le fichier n'est pas
+      // encore référencé dans une section/sous-section (pas encore
+      // sauvegardée). Seul SON propriétaire — l'id authentifié encodé en
+      // préfixe du nom `{id}-{timestamp}-{nom}` — peut y accéder.
+      const own = this._isOwnUpload(filename, user);
+      return { allowed: own, type: own ? "upload" : null };
     }
 
     const allowed = await this._canAccessFormation(row.id_formation, user);
     return { allowed, type: sousRow ? "sous-section" : "section" };
+  }
+
+  /**
+   * Un fichier non référencé est-il une création de l'utilisateur ?
+   * Le préfixe `{id}-` est posé par multer au moment de l'upload sous
+   * authentification ; aucun autre utilisateur ne peut le reproduire.
+   * Les anciens noms (`{timestamp}-...`) ne matchent pas et restent
+   * inaccessibles tant qu'ils ne sont pas référencés en base.
+   */
+  _isOwnUpload(filename, user) {
+    if (!user?.id) return false;
+    const prefix = String(filename ?? "").split("-")[0] || "";
+    if (!/^\d{1,8}$/.test(prefix)) return false;
+    return Number(prefix) === user.id;
   }
 
   /**

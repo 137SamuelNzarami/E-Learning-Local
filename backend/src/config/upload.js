@@ -51,7 +51,12 @@ const storage = multer.diskStorage({
       .basename(file.originalname, ext)
       .replace(/[^a-z0-9\-_]+/gi, "-")
       .slice(0, 80);
-    cb(null, `${Date.now()}-${base}${ext}`);
+    // L'id de l'utilisateur authentifié est encodé en préfixe du nom de
+    // fichier : il permet au serveur d'accorder à SON propriétaire un
+    // accès immédiat au fichier (prévisualisation avant sauvegarde de la
+    // section), sans affaiblir les règles d'accès des autres rôles.
+    const owner = req.user?.id ?? "u";
+    cb(null, `${owner}-${Date.now()}-${base}${ext}`);
   },
 });
 

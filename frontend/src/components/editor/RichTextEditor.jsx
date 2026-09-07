@@ -7,7 +7,7 @@ import Link from "@tiptap/extension-link";
 import Underline from "@tiptap/extension-underline";
 import Video from "./video-extension";
 import { Icons } from "../Icons";
-import { isSafeUrl, MAX_CONTENU, isProtectedFileUrl, buildFileUrl } from "../../utils/richText";
+import { isSafeUrl, MAX_CONTENU, isProtectedFileUrl, buildFileUrl, prepareRichTextForEditor, stripTokensFromRichText } from "../../utils/richText";
 import fileService from "../../services/fileService";
 import { useAuth } from "../../context/AuthContext";
 import "./rich-text.css";
@@ -79,15 +79,16 @@ export default function RichTextEditor({ value, onChange, disabled = false }) {
       Underline,
       Video,
     ],
-    content: value || "",
+    content: token ? prepareRichTextForEditor(value || "", token) : value || "",
     editable: !disabled,
     immediatelyRender: false,
     onUpdate: ({ editor: ed }) => {
       if (!onChange) return;
-      let html = ed.getHTML();
+      const html = stripTokensFromRichText(ed.getHTML());
       if (html.length > MAX_CONTENU) {
-        html = html.slice(0, MAX_CONTENU);
-        ed.commands.setContent(html, { emitUpdate: false });
+        onChange(html.slice(0, MAX_CONTENU));
+        ed.commands.setContent(token ? prepareRichTextForEditor(html.slice(0, MAX_CONTENU), token) : html.slice(0, MAX_CONTENU), { emitUpdate: false });
+        return;
       }
       onChange(html);
     },
@@ -95,27 +96,19 @@ export default function RichTextEditor({ value, onChange, disabled = false }) {
 
   useEffect(() => {
     if (!editor) return;
-    if ((value || "") !== editor.getHTML() && !editor.isFocused) {
-      editor.commands.setContent(value || "", { emitUpdate: false });
+    const clean = stripTokensFromRichText(editor.getHTML());
+    if ((value || "") !== clean && !editor.isFocused) {
+      editor.commands.setContent(token ? prepareRichTextForEditor(value || "", token) : value || "", { emitUpdate: false });
     }
-  }, [value, editor]);
+  }, [value, editor, token]);
 
-  useEffect(() => {
-    if (!editor || !token) return;
-    const dom = editor.view.dom;
-    const injectTokens = () => {
-      dom.querySelectorAll("img[src], video[src], source[src]").forEach((el) => {
-        const src = el.getAttribute("src");
-        if (src && isProtectedFileUrl(src) && !src.includes("token=")) {
-          el.setAttribute("src", buildFileUrl(src, token));
-        }
-      });
-    };
-    injectTokens();
-    const observer = new MutationObserver(injectTokens);
-    observer.observe(dom, { childList: true, subtree: true, attributes: true, attributeFilter: ["src"] });
-    return () => observer.disconnect();
-  }, [editor, token]);
+  /**
+   * Les URLs protégées vivent dans le DOCUMENT ProseMirror (préparées via
+   * prepareRichTextForEditor) : TipTap les rend nativement, elles survivent
+   * aux re-rendus, et getHTML() est dé-tokenisé à la persistance
+   * (stripTokensFromRichText). Aucun écouteur de transactions ni
+   * MutationObserver sur le DOM : plus de boucle de réconciliation.
+   */
 
   if (!editor) {
     return <div className="h-56 animate-pulse rounded-lg bg-slate-100" />;
@@ -140,18 +133,19 @@ export default function RichTextEditor({ value, onChange, disabled = false }) {
     setUploadError(null);
     setUploadSuccess(null);
     try {
-      const res = await fileService.upload(file);
+const res = await fileService.upload(file);
       const url = res.data?.src;
       if (!url) throw new Error("Le serveur n'a pas retourné d'URL.");
+      const src = token ? buildFileUrl(url, token) : url;
 
       if (kind === "image") {
-        chain().setImage({ src: url, alt: file.name.replace(/\.[^.]+$/, "").replace(/[-_]/g, " ") }).run();
+        chain().setImage({ src: src, alt: file.name.replace(/\.[^.]+$/, "").replace(/[-_]/g, " ") }).run();
       } else if (kind === "video") {
-        chain().setVideo({ src: url }).run();
+        chain().setVideo({ src: src }).run();
       } else {
         const label = file.name.replace(/\.[^.]+$/, "").replace(/[-_]/g, " ");
         const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-        chain().insertContent(`<a href="${url}">${esc(label)} — ${esc(file.name)}</a>`).run();
+        chain().insertContent(`<a href="${src}">${esc(label)} — ${esc(file.name)}</a>`).run();
       }
 
       placeCaretAfterSelection();
@@ -193,7 +187,24 @@ export default function RichTextEditor({ value, onChange, disabled = false }) {
     closePanel();
   };
 
-  const htmlLength = (editor.getHTML() || "").length;
+  /**
+   * Ouvre immédiatement le lien sélectionné dans un nouvel onglet.
+   * Les documents protégés (/api/files/...) utilisent l'URL authentifiée
+   * (avec ?token=) — aucun enregistrement préalable n'est nécessaire.
+   */
+  const openSelectedLink = () => {
+    const currentHref = editor?.getAttributes("link")?.href || linkUrl || "";
+    const href = String(currentHref).trim();
+    if (!href) return;
+    const target = isProtectedFileUrl(href)
+      ? buildFileUrl(href, token) || href
+      : href;
+    if (isSafeUrl(target)) {
+      window.open(target, "_blank", "noopener,noreferrer");
+    }
+  };
+
+  const htmlLength = stripTokensFromRichText(editor.getHTML()).length;
 
   return (
     <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
@@ -244,6 +255,7 @@ export default function RichTextEditor({ value, onChange, disabled = false }) {
               onKeyDown={(e) => e.key === "Enter" && applyLink()}
             />
             <button type="button" className="btn-primary !py-1.5 !text-xs" onClick={applyLink}>OK</button>
+            <button type="button" disabled={!(editor?.getAttributes("link")?.href || linkUrl.trim())} className="btn-secondary !py-1.5 !text-xs" onClick={openSelectedLink}>↗ Ouvrir</button>
           </div>
         </div>
       )}
